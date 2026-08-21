@@ -111,6 +111,6 @@ MIT License，详见 / see [LICENSE](LICENSE)。第三方库许可证见 / third
 
 ## 免责声明 / Disclaimer
 
-本项目仅用于学习与个人使用，与卡西欧（CASIO）公司无任何关联，也不对其计算结果作任何保证。
+本项目仅用于学习与个人使用，不对其计算结果作任何保证。
 
-This project is for learning and personal use only. It is not affiliated with CASIO and provides no warranty for calculation results.
+This project is for learning and personal use only. It provides no warranty for calculation results.
