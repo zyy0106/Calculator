@@ -2,6 +2,14 @@
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
+## 📥 直接下载 APK / Direct APK Download
+
+[![Download APK](https://img.shields.io/badge/Download-APK-blue)](https://github.com/zyy0106/Calculator/releases/latest/download/Calculator-debug.apk)
+
+✅ **可直接在 Android 系统上使用 / Works directly on Android** — 无需构建，下载后允许“安装未知来源应用”即可安装 / no build required; allow “install from unknown sources” and install.
+
+⬇️ [Calculator-debug.apk](https://github.com/zyy0106/Calculator/releases/latest/download/Calculator-debug.apk)
+
 **Calculator** 是一个**离线可用、开箱即用**的科学计算器 Web 应用：支持变量存储、函数编辑、定积分与导数、双函数绘图、实根求解以及线性/对数回归拟合。网页端纯静态、无任何 CDN 依赖，并可通过 Capacitor 打包成 Android APK。
 
 **Calculator** is an offline-first, out-of-the-box scientific calculator web app with variables, f(x)/g(x) editing, definite integrals and derivatives, dual-function graphing, root finding, and linear/log regression fitting. The web app is fully static with no CDN dependencies and can be packaged as an Android APK via Capacitor.
