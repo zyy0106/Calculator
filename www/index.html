@@ -46,7 +46,7 @@
             overflow-x: hidden;
         }
 
-        .top-nav { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; flex-shrink: 0; }
+        .top-nav { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; flex-shrink: 0; }
         .nav-btn {
             border: 1px solid #e0e6ed; background-color: #f8fafc;
             color: var(--text-main); border-radius: 10px; height: 34px;
@@ -110,6 +110,7 @@
         .btn-var-sm:active { transform: scale(0.94); background-color: #f5f5f5; }
 
         .keyboard { flex: 1; display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; min-height: 0; }
+        .main-cursor-row { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; min-height: 0; }
         button {
             border: 1px solid #eaedf0; border-radius: 12px; background-color: #fff;
             cursor: pointer; transition: all 0.1s;
@@ -216,6 +217,200 @@
     margin: 0;
     width: 100%;
 }
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+.stats-column {
+    border: 1px solid #e0e6ed;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #f8fafc;
+}
+.stats-column-title {
+    text-align: center;
+    font-size: 18px;
+    font-weight: 800;
+    padding: 8px;
+    color: var(--btn-primary);
+    border-bottom: 1px solid #e0e6ed;
+    background: #eef4fd;
+}
+.stats-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    min-height: 36px;
+    border-bottom: 1px solid #e8edf2;
+    font-size: 12px;
+    color: #555;
+}
+.stats-row:last-child { border-bottom: none; }
+.stats-row strong {
+    color: var(--text-main);
+    font-size: 13px;
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.matrix-panel {
+    display: none;
+    flex: 1;
+    min-height: 0;
+    flex-direction: column;
+    gap: 8px;
+}
+.matrix-calc-area, .matrix-def-area {
+    display: none;
+    flex: 1;
+    min-height: 0;
+    flex-direction: column;
+    gap: 8px;
+}
+.matrix-calc-display {
+    flex: 1 1 0;
+    background: var(--screen-bg);
+    border: 1px solid #dcdfe6;
+    border-radius: 14px;
+    padding: 10px 12px;
+    overflow: auto;
+    font-size: 18px;
+}
+.matrix-calc-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+    min-height: 0;
+}
+.matrix-calc-top {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 0 0 211px;
+    min-height: 0;
+}
+.matrix-calc-top .matrix-calc-display,
+.matrix-calc-top .matrix-answer {
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+}
+.matrix-calc-top .matrix-calc-display { flex: 0 0 56px; }
+.matrix-calc-top .matrix-answer { flex: 0 0 149px; }
+.matrix-answer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+    overflow: auto;
+    background: #fff;
+    border: 1px solid #e0e6ed;
+    border-radius: 12px;
+    padding: 8px 16px;
+    font-size: 18px;
+}
+.matrix-keypad {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+.matrix-answer .katex-display { margin: 0; min-width: max-content; }
+.matrix-key-row { display: grid; gap: 6px; flex: 1 1 0; min-height: 0; }
+.matrix-key-row.four { grid-template-columns: repeat(4, 1fr); }
+.matrix-key-row.five { grid-template-columns: repeat(5, 1fr); }
+.matrix-keypad button { min-height: 0; font-size: 16px; }
+.matrix-keypad .matrix-key-function { color: var(--btn-primary); font-size: 14px; }
+.matrix-power-select {
+    width: 100%;
+    height: 38px;
+    border: 1px solid #e0e6ed;
+    border-radius: 10px;
+    background: #fff;
+    font-family: var(--cm);
+    font-weight: 700;
+    text-align: center;
+}
+.matrix-def-head {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    flex-shrink: 0;
+}
+.matrix-def-head .nav-btn { height: 38px; }
+.matrix-def-meta {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+    gap: 8px;
+    align-items: center;
+    flex-shrink: 0;
+}
+.matrix-def-title {
+    font-size: 20px;
+    font-weight: 800;
+    padding-left: 4px;
+}
+.matrix-size-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+.matrix-size-control {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 5px;
+    background: #f8fafc;
+    border: 1px solid #e0e6ed;
+    border-radius: 10px;
+    padding: 4px 6px;
+    font-size: 12px;
+    font-weight: 800;
+}
+.matrix-size-control select {
+    width: 100%;
+    border: none;
+    background: transparent;
+    font-family: var(--cm);
+    font-weight: 800;
+    font-size: 14px;
+}
+.matrix-grid-wrap {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    background: #fff;
+    border: 1px solid #e0e6ed;
+    border-radius: 12px;
+    padding: 8px;
+}
+.matrix-grid {
+    display: grid;
+    gap: 6px;
+    width: max-content;
+    min-width: 100%;
+}
+.matrix-cell {
+    width: 76px;
+    height: 38px;
+    border: 1px solid #e0e6ed;
+    border-radius: 8px;
+    text-align: center;
+    font-family: var(--cm);
+    font-size: 15px;
+    background: #fdfdfd;
+}
+.matrix-cell:focus { outline: none; border-color: var(--btn-primary); }
     </style>
 </head>
 <body>
@@ -227,7 +422,8 @@
         <button id="nav-main"  class="nav-btn active" onclick="switchMode('main')">计算</button>
         <button id="nav-plot"  class="nav-btn" onclick="switchMode('plot')">绘图</button>
         <button id="nav-roots" class="nav-btn" onclick="switchMode('roots')">求根</button>
-        <button id="nav-fit"   class="nav-btn" onclick="switchMode('fit')">拟合</button>
+        <button id="nav-fit"   class="nav-btn" onclick="switchMode('fit')">统计</button>
+        <button id="nav-matrix" class="nav-btn" onclick="switchMode('matrix')">矩阵</button>
     </div>
 
     <div class="vars-panel" id="vars-panel">
@@ -274,15 +470,40 @@
     </div>
 
     <div id="fit-data-panel" style="display:none; flex-direction:column; gap:8px; flex:1; background:white; border-radius:14px; padding:12px; border:1px solid #ddd; overflow-y:hidden;">
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; text-align:center; font-size:14px; font-weight:800; color:#555; flex-shrink:0;">
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; text-align:center; font-size:14px; font-weight:800; color:#555; flex-shrink:0;">
             <div>自变量 (x)</div>
             <div>因变量 (y)</div>
+            <div>频次</div>
         </div>
         <div id="fit-rows" style="display:flex; flex-direction:column; gap:6px; flex:1; overflow-y:auto; padding-right:4px;"></div>
         <div style="display:flex; gap:8px; flex-shrink:0; margin-top:4px;">
     <button class="nav-btn" style="flex:1;" onclick="addFitRow()">+ 添行</button>
     <button class="nav-btn" style="flex:1; border-color:var(--btn-danger); color:var(--btn-danger);" onclick="removeFitRow()">- 删行</button>
     </div>
+    </div>
+
+    <div id="fit-stats-panel" style="display:none; flex-direction:column; gap:10px; flex:1; background:white; border-radius:14px; padding:12px; border:1px solid #ddd; overflow-y:auto;">
+        <div style="text-align:center; font-size:16px; font-weight:800; color:#555; flex-shrink:0;">变量统计</div>
+        <div class="stats-grid">
+            <div class="stats-column">
+                <div class="stats-column-title">x</div>
+                <div class="stats-row"><span>均值</span><strong id="stats-x-mean">---</strong></div>
+                <div class="stats-row"><span>方差 (<span id="stats-label-sx"></span>)</span><strong id="stats-x-variance">---</strong></div>
+                <div class="stats-row"><span>标准差 (<span id="stats-label-sigma-x"></span>)</span><strong id="stats-x-std">---</strong></div>
+                <div class="stats-row"><span>最大值</span><strong id="stats-x-max">---</strong></div>
+                <div class="stats-row"><span>最小值</span><strong id="stats-x-min">---</strong></div>
+                <div class="stats-row"><span>中位数</span><strong id="stats-x-median">---</strong></div>
+            </div>
+            <div class="stats-column">
+                <div class="stats-column-title">y</div>
+                <div class="stats-row"><span>均值</span><strong id="stats-y-mean">---</strong></div>
+                <div class="stats-row"><span>方差 (<span id="stats-label-sy"></span>)</span><strong id="stats-y-variance">---</strong></div>
+                <div class="stats-row"><span>标准差 (<span id="stats-label-sigma-y"></span>)</span><strong id="stats-y-std">---</strong></div>
+                <div class="stats-row"><span>最大值</span><strong id="stats-y-max">---</strong></div>
+                <div class="stats-row"><span>最小值</span><strong id="stats-y-min">---</strong></div>
+                <div class="stats-row"><span>中位数</span><strong id="stats-y-median">---</strong></div>
+            </div>
+        </div>
     </div>
 
     <div id="fit-graph-panel" class="graph-area" style="display:none;">
@@ -313,14 +534,70 @@
     </div>
 </div>
 
+    <div id="matrix-panel" class="matrix-panel">
+        <div id="matrix-calc-area" class="matrix-calc-area">
+            <div class="matrix-calc-body">
+                <div class="matrix-calc-top">
+                    <div id="matrix-calc-display" class="matrix-calc-display"></div>
+                    <div id="matrix-answer" class="matrix-answer">---</div>
+                </div>
+                <div class="matrix-keypad">
+                    <div class="matrix-key-row four">
+                        <button onclick="appendMatrixToken('A')">A</button><button onclick="appendMatrixToken('B')">B</button><button onclick="appendMatrixToken('C')">C</button><button onclick="appendMatrixToken('D')">D</button>
+                    </div>
+                    <div class="matrix-key-row five">
+                        <button class="matrix-key-function" onclick="appendMatrixTranspose()">转置</button><button class="matrix-key-function" onclick="appendMatrixFunction('inv')">逆</button><button class="matrix-key-function" onclick="appendMatrixFunction('det')">行列式</button><button class="matrix-key-function" onclick="appendMatrixFunction('tr')">迹</button><button id="matrix-power-btn" class="matrix-key-function" onclick="appendMatrixToken('^')"></button>
+                    </div>
+                    <div class="matrix-key-row four">
+                        <button onclick="appendMatrixToken('(')">(</button><button onclick="appendMatrixToken(')')">)</button><button onclick="moveMatrixCursor(-1)">←</button><button onclick="moveMatrixCursor(1)">→</button>
+                    </div>
+                    <div class="matrix-key-row five">
+                        <button onclick="appendMatrixToken('7')">7</button><button onclick="appendMatrixToken('8')">8</button><button onclick="appendMatrixToken('9')">9</button><button class="btn-danger" onclick="deleteMatrixLast()">DEL</button><button class="btn-danger" onclick="clearMatrixCalc()">AC</button>
+                    </div>
+                    <div class="matrix-key-row five">
+                        <button onclick="appendMatrixToken('4')">4</button><button onclick="appendMatrixToken('5')">5</button><button onclick="appendMatrixToken('6')">6</button><button onclick="appendMatrixToken('*')">×</button><button onclick="appendMatrixToken('/')">÷</button>
+                    </div>
+                    <div class="matrix-key-row five">
+                        <button onclick="appendMatrixToken('1')">1</button><button onclick="appendMatrixToken('2')">2</button><button onclick="appendMatrixToken('3')">3</button><button onclick="appendMatrixToken('+')">+</button><button onclick="appendMatrixToken('-')">−</button>
+                    </div>
+                    <div class="matrix-key-row five">
+                        <button onclick="appendMatrixToken('0')">0</button><button onclick="appendMatrixToken('.')">.</button><button onclick="appendMatrixToken('*10^{}')">×10ⁿ</button><button onclick="appendMatrixToken('Ans')">Ans</button><button class="btn-calc" onclick="calculateMatrix()">=</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="matrix-def-area" class="matrix-def-area">
+            <div class="matrix-def-head">
+                <button class="nav-btn active" id="matrix-def-A" onclick="selectMatrix('A')">A</button>
+                <button class="nav-btn" id="matrix-def-B" onclick="selectMatrix('B')">B</button>
+                <button class="nav-btn" id="matrix-def-C" onclick="selectMatrix('C')">C</button>
+                <button class="nav-btn" id="matrix-def-D" onclick="selectMatrix('D')">D</button>
+            </div>
+            <div class="matrix-def-meta">
+                <div id="matrix-def-title" class="matrix-def-title"></div>
+                <div class="matrix-size-controls">
+                    <label class="matrix-size-control"><span>行</span><select id="matrix-rows" onchange="resizeMatrix()"></select></label>
+                    <label class="matrix-size-control"><span>列</span><select id="matrix-cols" onchange="resizeMatrix()"></select></label>
+                </div>
+            </div>
+            <div class="matrix-grid-wrap"><div id="matrix-grid" class="matrix-grid"></div></div>
+        </div>
+    </div>
+
     <div id="funcs-subnav" style="display:none; grid-template-columns:1fr 1fr; gap:6px; flex-shrink:0;">
         <button class="nav-btn active" id="func-target-f" onclick="setFuncTarget('f')">编辑 f(x)</button>
         <button class="nav-btn"        id="func-target-g" onclick="setFuncTarget('g')">编辑 g(x)</button>
     </div>
 
-    <div id="fit-subnav" style="display:none; grid-template-columns:1fr 1fr; gap:6px; flex-shrink:0;">
+    <div id="fit-subnav" style="display:none; grid-template-columns:1fr 1fr 1fr; gap:6px; flex-shrink:0;">
         <button class="nav-btn active" id="fit-target-data" onclick="setFitTarget('data')">数据</button>
-        <button class="nav-btn"        id="fit-target-graph" onclick="setFitTarget('graph')">图像</button>
+        <button class="nav-btn"        id="fit-target-graph" onclick="setFitTarget('graph')">拟合</button>
+        <button class="nav-btn"        id="fit-target-stats" onclick="setFitTarget('stats')">变量统计</button>
+    </div>
+
+    <div id="matrix-subnav" style="display:none; grid-template-columns:1fr 1fr; gap:6px; flex-shrink:0;">
+        <button class="nav-btn active" id="matrix-target-calc" onclick="setMatrixTarget('calc')">计算</button>
+        <button class="nav-btn" id="matrix-target-def" onclick="setMatrixTarget('def')">定义</button>
     </div>
 
     <div id="var-btns-row">
@@ -355,11 +632,12 @@
         <button onclick="append('pi')">π</button>
         <button onclick="append('e')">e</button>
 
-        <button onclick="append('(')">(</button>
-        <button onclick="append(')')">)</button>
-        <button onclick="append(',')">,</button>
-        <button onclick="moveCursor(-1)">←</button>
-        <button onclick="moveCursor(1)">→</button>
+        <div class="main-cursor-row">
+            <button onclick="append('(')">(</button>
+            <button onclick="append(')')">)</button>
+            <button onclick="moveCursor(-1)">←</button>
+            <button onclick="moveCursor(1)">→</button>
+        </div>
 
         <button onclick="append('7')">7</button>
         <button onclick="append('8')">8</button>
@@ -393,7 +671,7 @@
         return math.log10(x);
     }
 });
-let state = { mode: 'main', expr: { main:'', fx:'', gx:'', vars:'' }, rootTarget:'f', funcTarget:'f', fitTarget:'data' };
+let state = { mode: 'main', expr: { main:'', fx:'', gx:'', vars:'' }, rootTarget:'f', funcTarget:'f', fitTarget:'data', matrixTarget:'calc' };
 let currentExpression = '';
 let cursorPos = 0;
 let lastAnswerVal = 0;
@@ -402,10 +680,23 @@ let config = { xMin:-10, xMax:10, yMin:-6, yMax:6 };
 let isTraceMode = false;
 
 // 拟合数据系统
-let fitData = [{x: '', y: ''}, {x: '', y: ''}, {x: '', y: ''}];
+let fitData = [{x: '', y: '', freq: '1'}, {x: '', y: '', freq: '1'}, {x: '', y: '', freq: '1'}];
 let fitConfig = { xMin:-10, xMax:10, yMin:-6, yMax:6 };
 let fitResult = { k: 0, b: 0, r: 0, valid: false, data: [] };
 let isLogFit = false;
+
+const matrixNames = ['A', 'B', 'C', 'D'];
+const matrixData = {
+    A: { rows: 1, cols: 1, values: [[0]] },
+    B: { rows: 1, cols: 1, values: [[0]] },
+    C: { rows: 1, cols: 1, values: [[0]] },
+    D: { rows: 1, cols: 1, values: [[0]] }
+};
+let activeMatrix = 'A';
+let matrixCalcExpr = '';
+let matrixCalcCursor = 0;
+let matrixLastAnswer = null;
+let matrixPreviousAnswer = 0;
 
 const VAR_KEYS   = ['a','b','c','x','y','z'];
 const VAR_LABELS = { a:'a', b:'b', c:'c', x:'x', y:'y', z:'z'};
@@ -480,7 +771,13 @@ math.import({
 
 (function initVarsPanel() {
     VAR_KEYS.forEach(k => { katex.render(VAR_LABELS[k], document.getElementById('vname-' + k), { throwOnError:false }); });
+    katex.render('s_x', document.getElementById('stats-label-sx'), { throwOnError:false });
+    katex.render('\\sigma_x', document.getElementById('stats-label-sigma-x'), { throwOnError:false });
+    katex.render('s_y', document.getElementById('stats-label-sy'), { throwOnError:false });
+    katex.render('\\sigma_y', document.getElementById('stats-label-sigma-y'), { throwOnError:false });
     renderFitRows();
+    initMatrixControls();
+    katex.render('x^n', document.getElementById('matrix-power-btn'), { throwOnError:false });
 })();
 
 function getEvalString(expr) {
@@ -488,6 +785,7 @@ function getEvalString(expr) {
     // 计算前先闭合已经填完最后一个槽位的模板（积分上限/分母/导数点）
     // 处理占位符与负号
     let s = closeCompletedTemplates(expr)
+        .replace(/sqrt\(([^()]*)$/g, 'sqrt($1)')
         .replace(/\{/g, '(').replace(/\}/g, ')')
         .replace(/□/g, '1').replace(/■/g, '1');
     s = s.replace(/\^-\s*([a-zA-Z0-9_.]+(?:\([^)]*\))?|\([^)]*\))/g, '^(-$1)');
@@ -634,6 +932,13 @@ function closeCompletedTemplates(expr) {
         const top = frames[frames.length - 1];
         if (!top || top.kind !== 'func') break;
 
+        // 根号只有一个参数，允许省略右括号；计算前按嵌套层级自动闭合。
+        if (top.name === 'sqrt') {
+            if (top.open + 1 < result.length) result += ')';
+            else break;
+            continue;
+        }
+
         const total = templateArgCount(top.name);
         if (total <= 1) break;
 
@@ -670,6 +975,20 @@ function tryNavigateRight() {
     if (!frames.length) return false;
 
     const frame = frames[frames.length - 1];
+
+    // 根号是单槽位、可省略右括号的结构；只有在槽位末尾按右移时才跳出。
+    if (frame.kind === 'func' && frame.name === 'sqrt') {
+        const closeIdx = findMatchingClose(currentExpression, frame.open, '(', ')');
+        const end = closeIdx === -1 ? currentExpression.length : closeIdx;
+        if (cursorPos !== end) return false;
+        if (closeIdx === -1) {
+            currentExpression = currentExpression.slice(0, end) + ')' + currentExpression.slice(end);
+            cursorPos = end + 1;
+        } else cursorPos = closeIdx + 1;
+        persistEditedExpression();
+        renderLatex();
+        return true;
+    }
 
     if (frame.kind === 'func' &&
         (frame.name === 'int' || frame.name === 'frac' || frame.name === 'deriv')) {
@@ -1016,6 +1335,7 @@ function renderLatex() {
             else if (char === 'p' && input.startsWith('pi', i)) { out += `${prefix}\\pi `; i += 2; continue; }
             else if (char === 'A' && input.startsWith('Ans', i)) { out += `${prefix}\\mathrm{Ans}`; i += 3; continue; }
             else if (char === '▲') { out += '\\htmlClass{cursor-blink}{|}'; i++; continue; }
+            else if (char === '\u0001') { out += ')'; i++; continue; }
             else if (char === '■') { out += '\\square '; i++; continue; }
             else { out += `${prefix}${char}`; }
 
@@ -1067,13 +1387,39 @@ function updatePlotScreen() {
 
 function append(v) {
     let insertStr = v, offset = v.length;
+    if (v === ')') {
+        // 积分/分数/导数模板的参数由逗号分隔；参数未填完时，右括号不能误关闭外层模板。
+        const frames = openFramesAt(currentExpression, cursorPos);
+        const top = frames[frames.length - 1];
+        if (top && top.kind === 'func') {
+            if (top.name === 'sqrt') {
+                // 手动右括号属于根号内容；不触发自动跳出。
+                const typedClose = currentExpression[cursorPos] === ')' ? '\u0001' : ')';
+                currentExpression = currentExpression.substring(0, cursorPos) + typedClose + currentExpression.substring(cursorPos);
+                cursorPos += 1;
+                renderLatex();
+                return;
+            }
+            const requiredCommas = top.name === 'int' ? 2 : (top.name === 'frac' || top.name === 'deriv' ? 1 : 0);
+            if (requiredCommas > 0 && (top.commas || []).length < requiredCommas) {
+                renderLatex();
+                return;
+            }
+        }
+    }
     if (v === '^{}') { insertStr = '^{□}'; offset = 2; }
     else if (v === '^{2}') { insertStr = '^{2}'; offset = 4; }
     else if (v === '*10^{}') { insertStr = '*10^{□}'; offset = 5; }
     else if (v === 'int(') { insertStr = 'int('; offset = 4; }
     else if (v === 'deriv(') { insertStr = 'deriv('; offset = 6; }
     else if (v === 'frac(') { insertStr = 'frac('; offset = 5; }
-    else if (v === 'sqrt(') { insertStr = 'sqrt('; offset = 5; }
+    else if (v === 'sqrt(') { insertStr = 'sqrt()'; offset = 5; }
+
+    // 自动闭合模板中，手动输入的右括号属于函数内容；预留的右括号仍留在光标右侧。
+    if (v === ')' && currentExpression[cursorPos] === ')' && openFramesAt(currentExpression, cursorPos).some(f => f.kind === 'func' && f.name === 'sqrt')) {
+        currentExpression = currentExpression.substring(0, cursorPos) + '\u0001' + currentExpression.substring(cursorPos);
+        cursorPos += 1; renderLatex(); return;
+    }
 
     if (currentExpression[cursorPos] === '□') {
         // 仅在 ^ 模板的 □ 占位符处替换（^{□}, *10^{□}）
@@ -1086,6 +1432,16 @@ function append(v) {
 }
 
 // 具有二维结构保护能力的删除机制
+function findFracDelimiterAtCursor() {
+    if (cursorPos <= 0 || currentExpression[cursorPos - 1] !== ',') return null;
+    const frames = openFramesAt(currentExpression, cursorPos);
+    for (let i = frames.length - 1; i >= 0; i--) {
+        const frame = frames[i];
+        if (frame.kind === 'func' && frame.name === 'frac' && (frame.commas || []).includes(cursorPos - 1)) return frame;
+    }
+    return null;
+}
+
 function deleteLast() {
     if (cursorPos === 0) return;
     let leftStr = currentExpression.substring(0, cursorPos);
@@ -1093,11 +1449,36 @@ function deleteLast() {
 
     if (leftStr.endsWith('}')) { cursorPos -= 1; renderLatex(); return; }
 
-    // 遇到逗号，不删除逗号，而是把光标平移
-    if (leftStr.endsWith(',')) { cursorPos -= 1; renderLatex(); return; }
+    // 分数的逗号是结构分隔符：从分母连续删除时移除逗号并回到分子末端。
+    if (leftStr.endsWith(',')) {
+        // frac 的逗号是分子/分母的结构分隔符，删除分母后应连同逗号一起移除。
+        // 其他多槽位模板仍保留逗号，仅将光标移回当前槽位起点。
+        if (findFracDelimiterAtCursor()) {
+            currentExpression = leftStr.substring(0, leftStr.length - 1) + rightStr;
+        }
+        cursorPos -= 1;
+        renderLatex();
+        return;
+    }
 
     // 常规原子标记的删除
-    const atomicTokens = ['sin(', 'cos(', 'tan(', 'log10(', 'log(', 'sqrt(', 'Ans', 'int(', 'deriv(', 'f(', 'g(', 'alpha', 'beta', 'theta', '^{', 'pi'];
+    // 分数函数名是一个不可拆分的编辑 token；在光标紧邻 frac( 时一次性移除。
+    if (leftStr.endsWith('sqrt(') && rightStr.startsWith(')')) {
+        currentExpression = leftStr.substring(0, leftStr.length - 5) + rightStr.substring(1);
+        cursorPos -= 5;
+        renderLatex();
+        if (state.mode === 'funcs') state.expr[state.funcTarget === 'f' ? 'fx' : 'gx'] = currentExpression;
+        return;
+    }
+    if (leftStr.endsWith('frac(')) {
+        currentExpression = leftStr.substring(0, leftStr.length - 5) + rightStr;
+        cursorPos -= 5;
+        renderLatex();
+        if (state.mode === 'funcs') state.expr[state.funcTarget === 'f' ? 'fx' : 'gx'] = currentExpression;
+        return;
+    }
+
+    const atomicTokens = ['sin(', 'cos(', 'tan(', 'log10(', 'log(', 'sqrt(', 'Ans', 'int(', 'deriv(', 'frac(', 'f(', 'g(', 'alpha', 'beta', 'theta', '^{', 'pi'];
     let deletedLen = 1, isBracketBlock = false;
 
     for (let t of atomicTokens) {
@@ -1196,13 +1577,15 @@ function renderFitRows() {
     container.innerHTML = '';
     fitData.forEach((row, idx) => {
         const div = document.createElement('div');
-        div.style.cssText = 'display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;';
+        div.style.cssText = 'display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:8px;';
         // 关键：判断是否为空，为空则传空字符串
         const xVal = (row.x === '' || row.x === null) ? '' : row.x;
         const yVal = (row.y === '' || row.y === null) ? '' : row.y;
+        const freqVal = (row.freq === '' || row.freq === null || row.freq === undefined) ? '1' : row.freq;
         div.innerHTML = `
-            <input type="text" inputmode="decimal" value="${xVal}" placeholder="" class="fit-input-cell" onchange="updateFitData(${idx}, 'x', this.value)">
-            <input type="text" inputmode="decimal" value="${yVal}" placeholder="" class="fit-input-cell" onchange="updateFitData(${idx}, 'y', this.value)">
+            <input type="text" inputmode="decimal" value="${xVal}" placeholder="" class="fit-input-cell" oninput="updateFitData(${idx}, 'x', this.value)" onchange="updateFitData(${idx}, 'x', this.value)">
+            <input type="text" inputmode="decimal" value="${yVal}" placeholder="" class="fit-input-cell" oninput="updateFitData(${idx}, 'y', this.value)" onchange="updateFitData(${idx}, 'y', this.value)">
+            <input type="text" inputmode="decimal" value="${freqVal}" placeholder="1" class="fit-input-cell" oninput="updateFitData(${idx}, 'freq', this.value)" onchange="updateFitData(${idx}, 'freq', this.value)">
         `;
         container.appendChild(div);
     });
@@ -1215,14 +1598,14 @@ function updateFitData(idx, key, val) {
 }
 
 function addFitRow() {
-    fitData.push({x: '', y: ''});
+    fitData.push({x: '', y: '', freq: '1'});
     renderFitRows();
     // 滚动到底部
     const rows = document.getElementById('fit-rows');
     rows.scrollTop = rows.scrollHeight;
     updateFitCalculation(); // 更新状态
 }
-function removeFitRow() { if (fitData.length > 2) { fitData.pop(); renderFitRows(); } }
+function removeFitRow() { if (fitData.length > 2) { fitData.pop(); renderFitRows(); updateFitCalculation(); } }
 
 function toggleLogFit() {
     isLogFit = !isLogFit;
@@ -1239,23 +1622,69 @@ function toggleLogFit() {
     updateFitCalculation(); // 此函数现在会处理坐标轴标签的切换
 }
 
+function formatStatValue(value) {
+    return Number.isFinite(value) ? parseFloat(value.toFixed(8)).toString() : '---';
+}
+
+function weightedStats(values) {
+    if (!values.length) return { mean: NaN, variance: NaN, std: NaN, max: NaN, min: NaN, median: NaN };
+    const total = values.reduce((sum, item) => sum + item.w, 0);
+    if (!(total > 0)) return { mean: NaN, variance: NaN, std: NaN, max: NaN, min: NaN, median: NaN };
+    const mean = values.reduce((sum, item) => sum + item.value * item.w, 0) / total;
+    const variance = values.reduce((sum, item) => sum + item.w * Math.pow(item.value - mean, 2), 0) / total;
+    const sorted = values.slice().sort((a, b) => a.value - b.value);
+    let acc = 0, median = sorted[sorted.length - 1].value;
+    for (let i = 0; i < sorted.length; i++) {
+        const item = sorted[i];
+        acc += item.w;
+        if (acc > total / 2) { median = item.value; break; }
+        if (acc === total / 2) {
+            median = i + 1 < sorted.length ? (item.value + sorted[i + 1].value) / 2 : item.value;
+            break;
+        }
+    }
+    return { mean, variance, std: Math.sqrt(variance), max: sorted[sorted.length - 1].value, min: sorted[0].value, median };
+}
+
+function updateVariableStats() {
+    const xs = [], ys = [];
+    fitData.forEach(p => {
+        const x = parseFloat(p.x), y = parseFloat(p.y);
+        let w = p.freq === '' || p.freq === null || p.freq === undefined ? 1 : parseFloat(p.freq);
+        if (!isFinite(w) || w < 0) w = 1;
+        if (isFinite(x) && isFinite(y) && w > 0) {
+            xs.push({ value: x, w });
+            ys.push({ value: y, w });
+        }
+    });
+    const xStats = weightedStats(xs), yStats = weightedStats(ys);
+    const fields = ['mean', 'variance', 'std', 'max', 'min', 'median'];
+    fields.forEach(name => {
+        document.getElementById('stats-x-' + name).innerText = formatStatValue(xStats[name]);
+        document.getElementById('stats-y-' + name).innerText = formatStatValue(yStats[name]);
+    });
+}
+
 function updateFitCalculation() {
+    updateVariableStats();
     let validPoints = [];
     fitData.forEach(p => {
         let vx = parseFloat(p.x);
         let vy = parseFloat(p.y);
+        let weight = p.freq === '' || p.freq === null || p.freq === undefined ? 1 : parseFloat(p.freq);
+        if (!isFinite(weight) || weight < 0) weight = 1;
         // 只有 X 和 Y 都有数值时才记录
-        if (!isNaN(vx) && !isNaN(vy)) {
+        if (!isNaN(vx) && !isNaN(vy) && weight > 0) {
             let x = vx, y = vy;
             if (isLogFit) {
                 // Log 模式下，非正数无法计算，直接跳过该点
                 if (x > 0 && y > 0) {
                     x = Math.log10(x);
                     y = Math.log10(y);
-                    validPoints.push({x, y});
+                    validPoints.push({x, y, w: weight});
                 }
             } else {
-                validPoints.push({x, y});
+                validPoints.push({x, y, w: weight});
             }
         }
     });
@@ -1283,10 +1712,10 @@ function updateFitCalculation() {
         return;
     }
 
-    let n = validPoints.length;
+    let n = validPoints.reduce((sum, p) => sum + p.w, 0);
     let sX=0, sY=0, sXY=0, sX2=0, sY2=0;
     validPoints.forEach(p => {
-        sX+=p.x; sY+=p.y; sXY+=p.x*p.y; sX2+=p.x*p.x; sY2+=p.y*p.y;
+        sX+=p.w*p.x; sY+=p.w*p.y; sXY+=p.w*p.x*p.y; sX2+=p.w*p.x*p.x; sY2+=p.w*p.y*p.y;
     });
 
     let den = n * sX2 - sX * sX;
@@ -1333,16 +1762,324 @@ function setFitTarget(t) {
     state.fitTarget = t;
     document.getElementById('fit-target-data').classList.toggle('active', t==='data');
     document.getElementById('fit-target-graph').classList.toggle('active', t==='graph');
+    document.getElementById('fit-target-stats').classList.toggle('active', t==='stats');
     document.getElementById('fit-data-panel').style.display = (t === 'data') ? 'flex' : 'none';
     document.getElementById('fit-graph-panel').style.display = (t === 'graph') ? 'flex' : 'none';
+    document.getElementById('fit-stats-panel').style.display = (t === 'stats') ? 'flex' : 'none';
     if (t === 'graph') { updateFitCalculation(); setTimeout(() => { initFitCanvas(); drawFitGraph(); }, 50); }
+    if (t === 'stats') updateVariableStats();
 }
+
+function initMatrixControls() {
+    ['matrix-rows', 'matrix-cols'].forEach(id => {
+        const select = document.getElementById(id);
+        select.innerHTML = '';
+        for (let i = 1; i <= 4; i++) {
+            const option = document.createElement('option');
+            option.value = String(i); option.textContent = String(i);
+            select.appendChild(option);
+        }
+    });
+    renderMatrixDefinition();
+    renderMatrixCalculation();
+}
+
+function selectMatrix(name) {
+    activeMatrix = name;
+    matrixNames.forEach(key => document.getElementById('matrix-def-' + key).classList.toggle('active', key === name));
+    renderMatrixDefinition();
+}
+
+function renderMatrixButtons() {
+    matrixNames.forEach(name => {
+        const m = matrixData[name];
+        katex.render(`${name}_{${m.rows}\\times${m.cols}}`, document.getElementById('matrix-def-' + name), { throwOnError:false });
+    });
+}
+
+function renderMatrixDefinition() {
+    const m = matrixData[activeMatrix];
+    document.getElementById('matrix-def-title').innerText = '矩阵' + activeMatrix;
+    document.getElementById('matrix-rows').value = String(m.rows);
+    document.getElementById('matrix-cols').value = String(m.cols);
+    const grid = document.getElementById('matrix-grid');
+    grid.style.gridTemplateColumns = `repeat(${m.cols}, 76px)`;
+    grid.innerHTML = '';
+    for (let r = 0; r < m.rows; r++) for (let c = 0; c < m.cols; c++) {
+        const input = document.createElement('input');
+        input.type = 'text'; input.inputMode = 'decimal'; input.className = 'matrix-cell';
+        input.value = String(m.values[r][c] ?? 0);
+        input.setAttribute('aria-label', `${activeMatrix}[${r + 1},${c + 1}]`);
+        input.addEventListener('input', () => updateMatrixCell(r, c, input.value));
+        grid.appendChild(input);
+    }
+    renderMatrixButtons();
+}
+
+function resizeMatrix() {
+    const m = matrixData[activeMatrix];
+    const rows = parseInt(document.getElementById('matrix-rows').value, 10);
+    const cols = parseInt(document.getElementById('matrix-cols').value, 10);
+    m.values = Array.from({length: rows}, (_, r) => Array.from({length: cols}, (_, c) => m.values[r]?.[c] ?? 0));
+    m.rows = rows; m.cols = cols;
+    renderMatrixDefinition();
+}
+
+function updateMatrixCell(row, col, value) {
+    const n = value.trim() === '' ? 0 : Number(value);
+    matrixData[activeMatrix].values[row][col] = Number.isFinite(n) ? n : 0;
+    matrixLastAnswer = null;
+}
+
+function cloneMatrix(m) { return {rows:m.rows, cols:m.cols, values:m.values.map(row => row.slice())}; }
+function isMatrixValue(v) { return v && Number.isInteger(v.rows) && Number.isInteger(v.cols) && Array.isArray(v.values); }
+function matrixError(message) { throw new Error(message); }
+function matrixAdd(a,b,sign=1) { if(!isMatrixValue(a)||!isMatrixValue(b)||a.rows!==b.rows||a.cols!==b.cols) matrixError('矩阵维数不匹配'); return {rows:a.rows,cols:a.cols,values:a.values.map((row,r)=>row.map((v,c)=>v+sign*b.values[r][c]))}; }
+function matrixMultiply(a,b) {
+    if(isMatrixValue(a)&&isMatrixValue(b)){ if(a.cols!==b.rows) matrixError('矩阵维数不匹配'); const values=Array.from({length:a.rows},()=>Array(b.cols).fill(0)); for(let i=0;i<a.rows;i++) for(let k=0;k<a.cols;k++) for(let j=0;j<b.cols;j++) values[i][j]+=a.values[i][k]*b.values[k][j]; return {rows:a.rows,cols:b.cols,values}; }
+    if(isMatrixValue(a)&&typeof b==='number') return {rows:a.rows,cols:a.cols,values:a.values.map(row=>row.map(v=>v*b))};
+    if(typeof a==='number'&&isMatrixValue(b)) return {rows:b.rows,cols:b.cols,values:b.values.map(row=>row.map(v=>a*v))};
+    return a*b;
+}
+function matrixDet(m) { if(!isMatrixValue(m)||m.rows!==m.cols) matrixError('行列式要求方阵'); const a=m.values.map(row=>row.slice()); let det=1; for(let i=0;i<m.rows;i++){let p=i;for(let r=i+1;r<m.rows;r++)if(Math.abs(a[r][i])>Math.abs(a[p][i]))p=r;if(Math.abs(a[p][i])<1e-12)return 0;if(p!==i){[a[i],a[p]]=[a[p],a[i]];det=-det;}const pivot=a[i][i];det*=pivot;for(let r=i+1;r<m.rows;r++){const f=a[r][i]/pivot;for(let c=i+1;c<m.cols;c++)a[r][c]-=f*a[i][c];}}return Math.abs(det)<1e-12?0:det; }
+function matrixInverse(m) { if(!isMatrixValue(m)||m.rows!==m.cols) matrixError('求逆要求方阵'); const n=m.rows,a=m.values.map((row,r)=>row.slice().concat(Array.from({length:n},(_,c)=>r===c?1:0))); for(let i=0;i<n;i++){let p=i;for(let r=i+1;r<n;r++)if(Math.abs(a[r][i])>Math.abs(a[p][i]))p=r;if(Math.abs(a[p][i])<1e-12)matrixError('矩阵奇异，无法求逆');[a[i],a[p]]=[a[p],a[i]];const q=a[i][i];for(let c=0;c<2*n;c++)a[i][c]/=q;for(let r=0;r<n;r++)if(r!==i){const f=a[r][i];for(let c=0;c<2*n;c++)a[r][c]-=f*a[i][c];}}return {rows:n,cols:n,values:a.map(row=>row.slice(n))}; }
+function matrixPower(m,e) { if(!isMatrixValue(m)||m.rows!==m.cols) matrixError('矩阵幂要求方阵'); if(!Number.isInteger(e)||e<=0) matrixError('矩阵幂指数必须是正整数'); let out={rows:m.rows,cols:m.cols,values:Array.from({length:m.rows},(_,r)=>Array.from({length:m.cols},(_,c)=>r===c?1:0))},base=cloneMatrix(m); while(e>0){if(e%2)out=matrixMultiply(out,base);base=matrixMultiply(base,base);e=Math.floor(e/2);} return out; }
+function transposeMatrix(m) { if(!isMatrixValue(m)) matrixError('转置要求矩阵'); return {rows:m.cols,cols:m.rows,values:Array.from({length:m.cols},(_,c)=>Array.from({length:m.rows},(_,r)=>m.values[r][c]))}; }
+function tokenizeMatrixExpr(expr) {
+    const tokens=[]; let i=0;
+    while(i<expr.length){
+        if(/\s/.test(expr[i])){i++;continue;}
+        const rest=expr.slice(i);
+        const word=rest.match(/^(transpose|inv|det|tr|Ans|[ABCD]|T)/);
+        if(word){tokens.push(word[1]);i+=word[1].length;continue;}
+        const num=rest.match(/^(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?/);
+        if(num){tokens.push(num[0]);i+=num[0].length;continue;}
+        const op=rest.match(/^[(){}+\-*/^□]/);
+        if(op){tokens.push(op[0]);i++;continue;}
+        matrixError('矩阵算式含有无法识别的字符');
+    }
+    return tokens;
+}
+function parseMatrixExpr(expr) {
+    expr=String(expr||'').replace(/\\(?:cdot|times)/g,'*');
+    const raw=tokenizeMatrixExpr(expr), t=[];
+    const isEnd=x => /^\d|^[ABCD]$|^Ans$|^T$|^[\)}]$/.test(x);
+    const isStart=x => /^\d|^[ABCD]$|^Ans$|^\($|^(transpose|inv|det|tr)$/.test(x);
+    for(let i=0;i<raw.length;i++){ const prev=raw[i-1], cur=raw[i]; if(prev && ((isEnd(prev)&&isStart(cur)) || (prev===')'&&isStart(cur)))) t.push('*'); t.push(cur); }
+    let pos=0; const peek=()=>t[pos], take=()=>t[pos++];
+    const applyFunction=(name,v)=>{ if(!isMatrixValue(v)) matrixError(name+'要求矩阵'); if(name==='inv') return matrixInverse(v); if(name==='transpose') return transposeMatrix(v); if(name==='det') return matrixDet(v); if(name==='tr'){if(v.rows!==v.cols)matrixError('求迹要求方阵'); return v.values.reduce((s,row,i)=>s+row[i],0);} };
+    function primary(){ const x=take(); if(x==='('){const v=addSub(); if(take()!==')')matrixError('括号不匹配'); return v;} if(matrixNames.includes(x))return cloneMatrix(matrixData[x]); if(x==='Ans'){return isMatrixValue(matrixPreviousAnswer)?cloneMatrix(matrixPreviousAnswer):Number(matrixPreviousAnswer)||0;} if(x && /^(?:\d|\.)/.test(x))return Number(x); matrixError('矩阵算式不完整'); }
+    function unary(){ const x=peek(); if(x==='+'||x==='-'){take(); const v=unary(); if(typeof v!=='number') matrixError('矩阵不支持一元负号'); return x==='-'?-v:v;} if(x==='inv'||x==='transpose'||x==='det'||x==='tr'){take(); if(take()!=='(')matrixError('函数括号不匹配'); const v=addSub(); if(peek()===')') take(); else if(x==='det'||x==='tr') matrixError('函数括号不匹配'); return applyFunction(x,v);} return primary(); }
+    function power(){
+        let v=unary();
+        if(peek()==='^'){
+            take();
+            const wrapped=peek()==='{'; if(wrapped)take();
+            if(peek()==='T'){take();v=transposeMatrix(v);}
+            else if(peek()==='-'){
+                take();
+                if (isMatrixValue(v)) {
+                    if (take()!=='1') matrixError('仅支持矩阵的逆写法');
+                    v=matrixInverse(v);
+                } else {
+                    const expToken=take();
+                    if(!expToken || !/^(?:\d|\.)/.test(expToken)) matrixError('幂指数必须是数字');
+                    const e=-Number(expToken);
+                    v=Math.pow(v,e);
+                }
+            }
+            else {
+                let e;
+                if(wrapped){
+                    const sign=peek()==='-' ? (take(),-1) : 1, expToken=take();
+                    if(!expToken || expToken==='□')matrixError('幂指数必须是数字');
+                    if(!/^(?:\d|\.)/.test(expToken))matrixError('幂指数必须是数字');
+                    e=sign*Number(expToken);
+                } else e=unary();
+                if(typeof e!=='number')matrixError('幂指数必须是数字'); v=isMatrixValue(v)?matrixPower(v,e):Math.pow(v,e);
+            }
+            if(wrapped && take()!=='}')matrixError('幂指数括号不匹配');
+        }
+        return v;
+    }
+    function mul(){ let v=power(); while(peek()==='*'||peek()==='/'){const op=take(),b=power(); if(op==='*')v=matrixMultiply(v,b); else {if(typeof b!=='number')matrixError('不支持除以矩阵'); if(b===0)matrixError('除数不能为零'); v=isMatrixValue(v)?matrixMultiply(v,1/b):v/b;} } return v; }
+    function addSub(){ let v=mul(); while(peek()==='+'||peek()==='-'){const op=take(),b=mul(); if(isMatrixValue(v)||isMatrixValue(b))v=matrixAdd(v,b,op==='+'?1:-1); else v=op==='+'?v+b:v-b;} return v; }
+    const result=addSub(); if(pos!==t.length)matrixError('矩阵算式不完整'); return result;
+}
+function formatMatrixNumber(n) { if(!Number.isFinite(n)) return 'NaN'; const a=Math.abs(n); if((a!==0&&a<1e-6)||a>=1e9) return n.toExponential(8).replace(/\.?(\d*?)0+e/,'$1e'); return parseFloat(n.toFixed(8)).toString(); }
+function formatMatrixTexNumber(n) { return formatMatrixNumber(n); }
+function matrixMatchingParen(s, open) { let depth=0; for(let i=open;i<s.length;i++){ if(s[i]==='(')depth++; else if(s[i]===')'&&!--depth)return i; } return -1; }
+function matrixMatchingBrace(s, open) { let depth=0; for(let i=open;i<s.length;i++){ if(s[i]==='{')depth++; else if(s[i]==='}'&&!--depth)return i; } return -1; }
+function renderMatrixTex(source, cursor) {
+    const marked=source.slice(0,cursor)+'\u0000'+source.slice(cursor);
+    function segment(s) {
+        let out='';
+        const prevAtomEnd = idx => {
+            let j=idx-1; while(j>=0 && (s[j]==='\u0000'||s[j]==='\u0001')) j--;
+            return j>=0 && /[0-9A-D)]/.test(s[j]);
+        };
+        const startsAtom = idx => {
+            const tail=s.slice(idx);
+            return /^[0-9A-D(]/.test(tail) || /^(?:Ans|transpose\(|inv\(|det\(|tr\()/.test(tail);
+        };
+        const dot = idx => {
+            if (!prevAtomEnd(idx) || !startsAtom(idx) || s[idx] === '^') return false;
+            let j=idx-1; while(j>=0 && (s[j]==='\u0000'||s[j]==='\u0001')) j--;
+            return !(/[0-9.]/.test(s[idx]) && /[0-9.]/.test(s[j] || ''));
+        };
+        for(let i=0;i<s.length;i++) {
+            if(s[i]==='\u0000'){out+='\\htmlClass{cursor-blink}{|}';continue;}
+            if(s[i]==='\u0001'){out+=')';continue;}
+            const fn=s.slice(i).match(/^(transpose|inv|det|tr)\(/);
+            if(fn){
+                if(dot(i)) out+='\\cdot ';
+                const name=fn[1], open=i+fn[0].length-1, end=matrixMatchingParen(s,open);
+                if(end<0){ out += name==='transpose'||name==='inv' ? '\\left('+segment(s.slice(open+1))+'\\right)'+(name==='transpose'?'^T':'^{-1}') : '\\operatorname{'+name+'}\\left('+segment(s.slice(open+1))+'\\right.'; break; }
+                const inner=segment(s.slice(open+1,end));
+                out += name==='transpose' ? '\\left('+inner+'\\right)^T' : name==='inv' ? '\\left('+inner+'\\right)^{-1}' : '\\operatorname{'+name+'}\\left('+inner+'\\right)';
+                i=end; continue;
+            }
+            if(s[i]==='^' && s[i+1]==='\u0000') {
+                out += '^{\\htmlClass{cursor-blink}{|}}';
+                i += 1;
+                continue;
+            }
+            if(s[i]==='^' && s[i+1]==='{') {
+                const end=matrixMatchingBrace(s,i+1);
+                if (s[i+2]==='\u0000') {
+                    const content=end<0?'':s.slice(i+3,end);
+                    out += '^{\\htmlClass{cursor-blink}{|}' + (content?segment(content):'') + '}';
+                    if(end<0) { i=s.length; break; }
+                    i=end; continue;
+                }
+            }
+            if(s.startsWith('^{',i)) {
+                if (dot(i)) out+='\\cdot ';
+                const end=matrixMatchingBrace(s,i+1);
+                const content=end<0?s.slice(i+2):s.slice(i+2,end);
+                let baseEnd=i-1; while(baseEnd>=0&&(s[baseEnd]==='\u0000'||s[baseEnd]==='\u0001'))baseEnd--;
+                if(baseEnd<0 || /[+\-*/(,]/.test(s[baseEnd])) out+='\\square ';
+                out+='^{'+(content?segment(content):'\\square')+'}';
+                if(end<0) { out+=''; break; }
+                i=end; continue;
+            }
+            if(s[i]==='('){
+                if(dot(i)) out+='\\cdot ';
+                const end=matrixMatchingParen(s,i);
+                if(end<0){ out+='\\left('+segment(s.slice(i+1))+'\\right.'; break; }
+                out+='\\left('+segment(s.slice(i+1,end))+'\\right)'; i=end;
+            } else if(s[i]===')')out+='\\right)'; else if(s[i]==='*')out+='\\cdot '; else if(s[i]==='/')out+='/'; else if(s[i]==='^')out+='^'; else if(s[i]==='T')out+='T'; else if(s[i]==='□')out+='\\square '; else if(s[i]==='A'&&s.slice(i).startsWith('Ans')){if(dot(i))out+='\\cdot ';out+='\\mathrm{Ans}';i+=2;} else { if(dot(i)) out+='\\cdot '; out+=s[i]; }
+        }
+        return out;
+    }
+    return segment(marked);
+}
+function renderMatrixCalculation() {
+    const display=document.getElementById('matrix-calc-display'), answer=document.getElementById('matrix-answer');
+    const tex = renderMatrixTex(matrixCalcExpr, matrixCalcCursor);
+    katex.render(matrixCalcExpr ? tex : '\\,',display,{throwOnError:false,trust:true});
+    if(matrixLastAnswer===null){answer.innerText='---';return;}
+    if(isMatrixValue(matrixLastAnswer)){const body=matrixLastAnswer.values.map(row=>row.map(formatMatrixTexNumber).join(' & ')).join(' \\\\ ');katex.render(`\\begin{bmatrix}${body}\\end{bmatrix}`,answer,{throwOnError:false});}
+    else katex.render(formatMatrixTexNumber(matrixLastAnswer),answer,{throwOnError:false});
+}
+function matrixTokenNeedsMultiply(token) {
+    if (matrixCalcCursor <= 0) return false;
+    const left = matrixCalcExpr.slice(0, matrixCalcCursor);
+    const prev = left[left.length - 1];
+    const leftAtom = /[0-9A-D)]/.test(prev) || left.endsWith('Ans');
+    const rightAtom = token === '(' || token === 'Ans' || /^[ABCD]$/.test(token) || /^(?:inv|det|tr|transpose)\(/.test(token);
+    return leftAtom && rightAtom;
+}
+function appendMatrixToken(token) {
+    let text = token, offset = token.length;
+    if (token === ')' && matrixCalcExpr[matrixCalcCursor] === ')' && /(?:^|)(transpose|inv)\([^()]*$/.test(matrixCalcExpr.slice(0, matrixCalcCursor))) {
+        matrixCalcExpr=matrixCalcExpr.slice(0,matrixCalcCursor)+'\u0001'+matrixCalcExpr.slice(matrixCalcCursor);
+        matrixCalcCursor += 1; matrixLastAnswer=null; renderMatrixCalculation(); return;
+    }
+    if (token === '^') { text='^{□}'; offset=2; }
+    if (token === '*10^{}') { text='*10^{□}'; offset=5; }
+    if (matrixTokenNeedsMultiply(token)) { text='*'+text; offset+=1; }
+    if (matrixCalcExpr[matrixCalcCursor] === '□') matrixCalcExpr=matrixCalcExpr.slice(0,matrixCalcCursor)+text+matrixCalcExpr.slice(matrixCalcCursor+1);
+    else matrixCalcExpr=matrixCalcExpr.slice(0,matrixCalcCursor)+text+matrixCalcExpr.slice(matrixCalcCursor);
+    matrixCalcCursor+=offset; matrixLastAnswer=null; renderMatrixCalculation();
+}
+function appendMatrixFunction(name) {
+    const autoClose = name === 'transpose' || name === 'inv';
+    const raw=autoClose ? name+'()' : name+'('; const text=matrixTokenNeedsMultiply(raw)?'*'+raw:raw;
+    matrixCalcExpr=matrixCalcExpr.slice(0,matrixCalcCursor)+text+matrixCalcExpr.slice(matrixCalcCursor);
+    matrixCalcCursor += (text.startsWith('*') ? 1 : 0) + name.length + 1;
+    matrixLastAnswer=null; renderMatrixCalculation();
+}
+function appendMatrixTranspose() { appendMatrixFunction('transpose'); }
+function moveMatrixCursor(dir) {
+    if (dir > 0 && matrixCalcExpr[matrixCalcCursor] === ')') {
+        let depth = 0;
+        for (let i = matrixCalcCursor; i >= 0; i--) {
+            if (matrixCalcExpr[i] === ')') depth++;
+            else if (matrixCalcExpr[i] === '(') {
+                if (depth > 0) {
+                    depth--;
+                    if (depth === 0) {
+                        const m = matrixCalcExpr.slice(0, i).match(/(transpose|inv)\s*$/);
+                        if (m) { matrixCalcCursor += 1; renderMatrixCalculation(); return; }
+                    }
+                    continue;
+                }
+                break;
+            }
+        }
+    }
+    matrixCalcCursor=Math.max(0,Math.min(matrixCalcExpr.length,matrixCalcCursor+dir));
+    const atomicTokens=['transpose(','inv(','det(','tr(','Ans','*10^{'];
+    let moved=true;
+    while(moved){
+        moved=false;
+        for(const token of atomicTokens){
+            for(let i=1;i<token.length;i++){
+                if(matrixCalcExpr.slice(0,matrixCalcCursor).endsWith(token.slice(0,i)) && matrixCalcExpr.slice(matrixCalcCursor).startsWith(token.slice(i))){
+                    matrixCalcCursor += dir<0 ? -i : token.length-i; moved=true; break;
+                }
+            }
+            if(moved) break;
+        }
+    }
+    matrixCalcCursor=Math.max(0,Math.min(matrixCalcExpr.length,matrixCalcCursor)); renderMatrixCalculation();
+}
+function deleteMatrixLast() {
+    if(matrixCalcCursor<=0)return;
+    let left=matrixCalcExpr.slice(0,matrixCalcCursor), right=matrixCalcExpr.slice(matrixCalcCursor);
+    if (left.endsWith('}')) { matrixCalcCursor -= 1; renderMatrixCalculation(); return; }
+    const match=left.match(/(inv|det|tr|transpose)\($/);
+    if(match){ matrixCalcExpr=left.slice(0,-match[0].length)+right.replace(/^\)/,''); matrixCalcCursor-=match[0].length; }
+    else if(left.endsWith('Ans')){ matrixCalcExpr=left.slice(0,-3)+right; matrixCalcCursor-=3; }
+    else if(left.endsWith('^{')) {
+        left=left.slice(0,-2);
+        let depth=1, close=-1;
+        for(let i=0;i<right.length;i++){ if(right[i]==='{')depth++; else if(right[i]==='}')depth--; if(depth===0){close=i;break;} }
+        if(close>=0) right=right.slice(close+1);
+        else if(right.startsWith('□')) right=right.slice(1);
+        matrixCalcExpr=left+right; matrixCalcCursor=left.length;
+    }
+    else { matrixCalcExpr=left.slice(0,-1)+right; matrixCalcCursor--; }
+    matrixLastAnswer=null; renderMatrixCalculation();
+}
+function clearMatrixCalc() { matrixCalcExpr='';matrixCalcCursor=0;matrixLastAnswer=null;renderMatrixCalculation(); }
+function calculateMatrix() { try{const result=parseMatrixExpr(matrixCalcExpr);matrixPreviousAnswer=isMatrixValue(result)?cloneMatrix(result):result;matrixLastAnswer=result;renderMatrixCalculation();}catch(e){matrixLastAnswer=null;document.getElementById('matrix-answer').innerText=e.message||'矩阵计算错误';} }
 
 function setFuncTarget(t) {
     state.funcTarget = t;
     document.getElementById('func-target-f').classList.toggle('active', t==='f');
     document.getElementById('func-target-g').classList.toggle('active', t==='g');
     if (state.mode === 'funcs') { currentExpression = state.expr[t === 'f' ? 'fx' : 'gx'] || ''; cursorPos = currentExpression.length; renderLatex(); resVal.innerText = '编辑中...'; }
+}
+
+function setMatrixTarget(target) {
+    state.matrixTarget = target;
+    document.getElementById('matrix-target-calc').classList.toggle('active', target === 'calc');
+    document.getElementById('matrix-target-def').classList.toggle('active', target === 'def');
+    document.getElementById('matrix-calc-area').style.display = target === 'calc' ? 'flex' : 'none';
+    document.getElementById('matrix-def-area').style.display = target === 'def' ? 'flex' : 'none';
+    if (target === 'def') renderMatrixDefinition(); else renderMatrixCalculation();
 }
 
 function switchMode(m) {
@@ -1358,24 +2095,32 @@ function switchMode(m) {
     else currentExpression = state.expr[m] || '';
     cursorPos = currentExpression.length;
 
-    const isVars = m === 'vars', isPlot = m === 'plot', isRoots = m === 'roots', isFuncs = m === 'funcs', isFit = m === 'fit', isMain = m === 'main';
+    const isVars = m === 'vars', isPlot = m === 'plot', isRoots = m === 'roots', isFuncs = m === 'funcs', isFit = m === 'fit', isMatrix = m === 'matrix', isMain = m === 'main';
 
     document.getElementById('funcs-subnav').style.display   = isFuncs ? 'grid' : 'none';
     document.getElementById('fit-subnav').style.display     = isFit ? 'grid' : 'none';
-    document.getElementById('main-screen').style.display    = (isRoots || isFit) ? 'none'  : 'flex';
-    document.getElementById('keyboard-area').style.display  = (isPlot || isRoots || isFit) ? 'none' : 'grid';
-    document.getElementById('var-btns-row').style.display   = (isPlot || isRoots || isFit) ? 'none' : 'grid';
+    document.getElementById('matrix-subnav').style.display  = isMatrix ? 'grid' : 'none';
+    document.getElementById('main-screen').style.display    = (isRoots || isFit || isMatrix) ? 'none'  : 'flex';
+    document.getElementById('keyboard-area').style.display  = (isPlot || isRoots || isFit || isMatrix) ? 'none' : 'grid';
+    document.getElementById('var-btns-row').style.display   = (isPlot || isRoots || isFit || isMatrix) ? 'none' : 'grid';
     document.getElementById('graph-area').style.display     = isPlot  ? 'flex'  : 'none';
     document.getElementById('roots-panel').style.display    = isRoots ? 'flex'  : 'none';
     document.getElementById('vars-panel').style.display     = isVars  ? 'grid'  : 'none';
     document.getElementById('fit-data-panel').style.display = (isFit && state.fitTarget === 'data') ? 'flex' : 'none';
     document.getElementById('fit-graph-panel').style.display = (isFit && state.fitTarget === 'graph') ? 'flex' : 'none';
+    document.getElementById('fit-stats-panel').style.display = (isFit && state.fitTarget === 'stats') ? 'flex' : 'none';
+    document.getElementById('matrix-panel').style.display = isMatrix ? 'flex' : 'none';
+    document.getElementById('matrix-calc-area').style.display = (isMatrix && state.matrixTarget === 'calc') ? 'flex' : 'none';
+    document.getElementById('matrix-def-area').style.display = (isMatrix && state.matrixTarget === 'def') ? 'flex' : 'none';
 
     if (isPlot) {
         singleDisplay.style.display = 'none'; doubleDisplay.style.display = 'flex'; resVal.style.display = 'none';
         updatePlotScreen(); setTimeout(() => { initCanvas(); drawGraph(); }, 50);
     } else if (isFit) {
         if (state.fitTarget === 'graph') { updateFitCalculation(); setTimeout(() => { initFitCanvas(); drawFitGraph(); }, 50); }
+        else if (state.fitTarget === 'stats') updateVariableStats();
+    } else if (isMatrix) {
+        if (state.matrixTarget === 'def') renderMatrixDefinition(); else renderMatrixCalculation();
     } else if (!isRoots) {
         singleDisplay.style.display = 'block'; doubleDisplay.style.display = 'none'; resVal.style.display = 'block';
         if (isMain) resVal.innerText = '= ' + lastAnswerStr;
