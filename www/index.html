@@ -103,7 +103,7 @@
             text-align: center; white-space: nowrap; overflow: hidden;
             text-overflow: ellipsis; max-width: 100%; line-height: 1;
         }
-        #var-btns-row { display: grid; grid-template-columns: repeat(7, 2fr); gap: 6px; flex-shrink: 0; }
+        #var-btns-row { display: grid; grid-template-columns: repeat(6, 1fr) 1.9fr; gap: 6px; flex-shrink: 0; }
         .btn-var-sm {
             height: 26px; border: 1px solid #e0e6ed; border-radius: 8px;
             background: #fff; cursor: pointer; transition: all 0.1s;
@@ -111,6 +111,42 @@
             color: #7c5cbf; font-style: italic; padding: 0;
         }
         .btn-var-sm:active { transform: scale(0.94); background-color: #f5f5f5; }
+        .btn-const {
+            font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-style: normal;
+            font-size: 12px; font-weight: 700; color: var(--btn-primary); white-space: nowrap;
+        }
+        .btn-const.active { background: var(--btn-primary); color: #fff; border-color: var(--btn-primary); }
+
+        #const-panel { display: none; flex: 1; min-height: 0; flex-direction: column; gap: 6px; }
+        .const-toolbar { display: grid; grid-template-columns: repeat(3, 1fr) 2fr; gap: 6px; flex-shrink: 0; }
+        .const-toolbar button { height: 36px; font-size: 17px; }
+        .const-toolbar .const-back { font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 14px; font-weight: 700; }
+        .const-list {
+            flex: 1; min-height: 0; overflow-y: auto; display: grid;
+            grid-template-columns: 1fr 1fr; gap: 6px; align-content: start;
+            touch-action: pan-y; overscroll-behavior: contain; padding-bottom: 4px;
+            position: relative; /* 收住 KaTeX 的绝对定位 MathML, 否则会撑长整个页面 */
+        }
+        .const-group-title {
+            grid-column: 1 / -1; padding: 4px 2px 0;
+            font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+            font-size: 12px; font-weight: 700; color: #8a94a3;
+        }
+        .const-cell {
+            position: relative; height: 44px; border-radius: 10px; padding: 0 8px; min-width: 0;
+            display: flex; align-items: center; justify-content: flex-start;
+            overflow: hidden; white-space: nowrap; font-size: 15px; font-weight: 400;
+            user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: pan-y;
+        }
+        .const-cell .c-sym { flex-shrink: 0; }
+        .const-cell .c-name {
+            min-width: 0; overflow: hidden; text-overflow: ellipsis; color: #444;
+            font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 13px;
+        }
+        .const-cell .c-val { display: none; font-size: 12px; color: var(--text-main); }
+        .const-cell.show-val { background: #eef4fd; border-color: var(--btn-primary); }
+        .const-cell.show-val .c-sym, .const-cell.show-val .c-name { display: none; }
+        .const-cell.show-val .c-val { display: block; }
 
         .keyboard { flex: 1; display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; min-height: 0; }
         .main-cursor-row { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; min-height: 0; }
@@ -610,6 +646,7 @@
         <button class="btn-var-sm" onclick="append('x')">x</button>
         <button class="btn-var-sm" onclick="append('y')">y</button>
         <button class="btn-var-sm" onclick="append('z')">z</button>
+        <button class="btn-var-sm btn-const" id="btn-const" onclick="toggleConstPanel()">物理常数</button>
     </div>
 
     <div class="keyboard" id="keyboard-area">
@@ -665,6 +702,16 @@
         <button onclick="append('*10^{}')">×10ⁿ</button>
         <button onclick="append('Ans')">Ans</button>
         <button class="btn-calc" onclick="calculate()">=</button>
+    </div>
+
+    <div id="const-panel">
+        <div class="const-toolbar">
+            <button onclick="moveCursor(-1)">←</button>
+            <button onclick="moveCursor(1)">→</button>
+            <button class="btn-danger" onclick="deleteLast()">DEL</button>
+            <button class="const-back" onclick="toggleConstPanel()">返回键盘</button>
+        </div>
+        <div class="const-list" id="const-list"></div>
     </div>
 </div>
 
@@ -1515,7 +1562,7 @@ function updateVarsPanel() {
         if (k === 'x' && varExprs.x === '') { el.innerText = '未定义'; el.style.color = '#bbb'; }
         else {
             const val = varVals[k];
-            el.innerText = (typeof val === 'number') ? parseFloat(val.toFixed(8)).toString() : String(val);
+            el.innerText = (typeof val === 'number') ? math.format(val, { precision:8 }) : String(val);
             el.style.color = '#555';
         }
     });
@@ -2137,6 +2184,7 @@ function switchMode(m) {
     document.querySelectorAll('.top-nav .nav-btn').forEach(b => b.classList.remove('active'));
     document.getElementById('nav-' + m).classList.add('active');
     state.mode = m;
+    if (constPanelOpen) setConstPanel(false);
 
     if (m === 'main' || m === 'funcs' || m === 'vars') { const k = EditorCore.activeEditorKey(); EditorCore.cursorToEnd(k); currentExpression = EditorCore.serialize(k); }
     else currentExpression = state.expr[m] || '';
@@ -2348,6 +2396,72 @@ function syncFitRangeInputsFromConfig() { document.getElementById('fitXMin').val
 function syncFitFromInput() { fitConfig.xMin = parseFloat(document.getElementById('fitXMin').value); fitConfig.xMax = parseFloat(document.getElementById('fitXMax').value); fitConfig.yMin = parseFloat(document.getElementById('fitYMin').value); fitConfig.yMax = parseFloat(document.getElementById('fitYMax').value); drawFitGraph(); }
 
 // 绑定实体键盘
+// ===== S4: 物理常数面板 =====
+// 短按 -> 在光标处插入原子常数; 长按 450ms -> cell 内显示科学记数法, 松手恢复且不插入;
+// 移动超过 8px 视为滚动, 不插入.
+let constPanelOpen = false, constPanelBuilt = false;
+const CONST_LONG_MS = 450, CONST_MOVE_PX = 8, CONST_SHOW_SIG = 10;
+function buildConstPanel() {
+    if (constPanelBuilt) return;
+    constPanelBuilt = true;
+    const list = document.getElementById('const-list');
+    CONST_GROUPS.forEach(g => {
+        const t = document.createElement('div');
+        t.className = 'const-group-title'; t.textContent = g.label;
+        list.appendChild(t);
+        g.items.forEach(c => {
+            const b = document.createElement('button');
+            b.type = 'button'; b.className = 'const-cell'; b.dataset.id = c.id;
+            const sym = document.createElement('span'); sym.className = 'c-sym';
+            const name = document.createElement('span'); name.className = 'c-name'; name.textContent = '：' + c.name;
+            const val = document.createElement('span'); val.className = 'c-val';
+            katex.render(c.tex, sym, { throwOnError:false });
+            const sp = constSciParts(c.id, CONST_SHOW_SIG);
+            katex.render(sp ? sp.tex : '?', val, { throwOnError:false });
+            b.title = c.name;
+            b.append(sym, name, val);
+            bindConstCell(b);
+            list.appendChild(b);
+        });
+    });
+}
+function bindConstCell(b) {
+    let timer = null, pid = null, x0 = 0, y0 = 0, longShown = false, moved = false;
+    const reset = () => { clearTimeout(timer); timer = null; pid = null; b.classList.remove('show-val'); };
+    b.addEventListener('pointerdown', e => {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        reset();
+        pid = e.pointerId; x0 = e.clientX; y0 = e.clientY; longShown = false; moved = false;
+        timer = setTimeout(() => { timer = null; longShown = true; b.classList.add('show-val'); }, CONST_LONG_MS);
+    });
+    b.addEventListener('pointermove', e => {
+        if (e.pointerId !== pid || moved) return;
+        if (Math.hypot(e.clientX - x0, e.clientY - y0) > CONST_MOVE_PX) {
+            moved = true;
+            if (!longShown) { clearTimeout(timer); timer = null; }
+        }
+    });
+    b.addEventListener('pointerup', e => {
+        if (e.pointerId !== pid) return;
+        const insert = !longShown && !moved;
+        reset();
+        if (insert) append('const:' + b.dataset.id);
+    });
+    b.addEventListener('pointercancel', reset);
+    b.addEventListener('pointerleave', e => { if (e.pointerId === pid) { moved = true; reset(); } });
+    b.addEventListener('contextmenu', e => e.preventDefault());
+    // 键盘激活 (detail === 0) 没有 pointer 事件, 单独处理
+    b.addEventListener('click', e => { if (e.detail === 0) append('const:' + b.dataset.id); });
+}
+function setConstPanel(open) {
+    constPanelOpen = open;
+    if (open) buildConstPanel();
+    document.getElementById('const-panel').style.display = open ? 'flex' : 'none';
+    document.getElementById('keyboard-area').style.display = open ? 'none' : 'grid';
+    document.getElementById('btn-const').classList.toggle('active', open);
+}
+function toggleConstPanel() { setConstPanel(!constPanelOpen); }
+
 document.addEventListener('keydown', function(e) {
     if (document.activeElement.tagName === 'INPUT') return;
     const key = e.key;

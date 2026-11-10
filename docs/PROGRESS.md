@@ -11,7 +11,7 @@
 | S1 | 物理/数学常数数据层 | `C:\Users\28233\Documents\ChatGPT\WebCASIO\tools\constants-data.js`、`C:\Users\28233\Documents\ChatGPT\WebCASIO\docs\常数表.md` | 否 | — | DONE |
 | S2 | 编辑器内核（纯模块 + 单测） | `C:\Users\28233\Documents\ChatGPT\WebCASIO\tools\editor-core.js`、`C:\Users\28233\Documents\ChatGPT\WebCASIO\tools\editor-core.test.js` | 否 | — | DONE |
 | S3 | 内核接入计算器 | 改 `C:\Users\28233\Documents\ChatGPT\WebCASIO\www\index.html` | 是 | S1+S2 | DONE |
-| S4 | 物理常数面板 UI | 改 `C:\Users\28233\Documents\ChatGPT\WebCASIO\www\index.html` | 是 | S3 | TODO |
+| S4 | 物理常数面板 UI | 改 `C:\Users\28233\Documents\ChatGPT\WebCASIO\www\index.html` | 是 | S3 | DONE |
 | S5 | 回归测试套件 + 交付 | `C:\Users\28233\Documents\ChatGPT\WebCASIO\tools\suite.js`、`C:\Users\28233\Documents\ChatGPT\WebCASIO\docs\输入测试报告.md`、同步 android 副本 | 是（仅修 bug） | S4 | TODO |
 
 S3 / S4 / S5 改同一个文件，必须串行。S1 与 S2 互不相干，可并行。
@@ -57,10 +57,15 @@ S3 / S4 / S5 改同一个文件，必须串行。S1 与 S2 互不相干，可并
 - 行为说明：
   - funcs 模式每次编辑都把序列化结果写入 `state.expr.fx/gx`（即使表达式暂不合法）；plot/roots/tracker 读取处有 try/catch，不合法时只是画不出；`calculate` 只给出「已保存」或「语法错误」。
   - vars 模式的 `varExprs` 只在 `calculate` 成功时写入（内核默认 onChange 会写，但 `configure` 传入的 glue onChange 覆盖了它）。
+### S4（已完成）
+- 产出物：`C:\Users\28233\Documents\ChatGPT\WebCASIO\www\index.html`（2478 行）。改前备份：`%TEMP%\index.html.bak-s4`。补丁脚本 `C:\Users\28233\Documents\ChatGPT\WebCASIO\tools\s4-patch.js` 已执行过，**不要再运行**。
+- 内容：`#btn-const`（「物理常数」）是 `#var-btns-row` 第 7 个子元素，grid 改为 `repeat(6,1fr) 1.9fr`（原 `repeat(7,2fr)` 放不下四个汉字）。`#const-panel` 紧跟 `#keyboard-area`，占同一 flex 位置；工具栏 ← → DEL 返回键盘；`#const-list` 两列 grid、7 个分组标题、53 个 cell，cell 文本「符号：中文名」（符号用 KaTeX）。长按 450ms 加 `.show-val` 显示 10 位有效数字科学记数法，松手恢复且不插入；移动 >8px 视为滚动不插入；短按 `append('const:'+id)`；屏蔽 contextmenu；键盘激活（click detail=0）也能插入。`switchMode` 开头调用 `setConstPanel(false)`。面板首次打开时才构建（`buildConstPanel`）。
+- 顺带修的 bug：
+  1. 变量卡片 `vval-*` 原用 `toFixed(8)`，mₑ 等小常数显示为 0；改为 `math.format(val,{precision:8})`。
+  2. 打开面板后整页可滚动到 1825px：KaTeX 的绝对定位 MathML 没有定位祖先；给 `.const-list` 和 `.const-cell` 加 `position:relative` 后页面高度恢复 860。
+- 验证（脚手架 `%TEMP%\webcasio-test\`）：`node C:\Users\28233\Documents\ChatGPT\WebCASIO\tools\s4check.js` → `S4CHECK OK`（布局/两列/无溢出/公式框高度不变 88→88、短按插入 c0、长按 qe 显示 1.602176634×10⁻¹⁹ 且不插入、拖动不插入、一次 DEL 删掉 ε₀、c0×2、qe×NA=96485.33212、mue×π、隐式乘 2ħ、plot/vars/main 切换关面板、变量 b=mₑ 后 b/mₑ=1、无 page error）。回归：`editor-core.test.js` 2223 通过、`probe.js` 8 条全对、`s3check.js` 无错误。截图 `%TEMP%\webcasio-test\s4-panel.png`、`s4-longpress.png`、`s4-end.png`。
+- 未验证：真机触摸（Android WebView）上的长按/滚动手感，只用无头 Edge 鼠标事件模拟过；`s4check.js` 在键盘隐藏时用 `press` 点隐藏按钮输入运算符，这只验证逻辑不验证 UI 可达性（面板内无运算符键，用户需「返回键盘」）。
 ## 待办明细
-
-### S4 要做的事
-`#btn-const` 加入 `#var-btns-row`（CSS `repeat(6,2fr)` → `repeat(7,2fr)`），`#const-panel` 两列 grid + 长按 450ms 显示科学记数法 + 短按插入原子。
 
 ### S5 要做的事
 大批量逐键输入 + 中途 DEL + 最终 `=` 的回归套件，产出 Markdown 测试报告给用户；`Compare-Object` 校验后同步到 `android\app\src\main\assets\public\index.html`。
