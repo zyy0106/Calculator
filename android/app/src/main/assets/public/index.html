@@ -1,0 +1,2478 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Calculator</title>
+
+    <script src="math.min.js"></script>
+    <link rel="stylesheet" href="katex.min.css">
+    <script src="katex.min.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #f0f3f6;
+            --calc-bg: #ffffff;
+            --screen-bg: #fdfdfd;
+            --btn-primary: #4a90e2;
+            --btn-danger: #f56c6c;
+            --text-main: #1a1a1a;
+            --color-fx: #0984e3;
+            --color-gx: #e17055;
+            --cm: 'Computer Modern Serif', 'CMU Serif', Georgia, serif;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg-color);
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; margin: 0; font-family: var(--cm);
+            height: 100vh;
+            height: 100dvh;
+            padding: 0;
+        }
+
+        .calculator {
+            background-color: var(--calc-bg);
+            width: min(440px, 100vw);
+            height: 100vh;
+            height: 100dvh;
+            border-radius: 0;
+            box-shadow: none;
+            padding: 20px 24px 22px;
+            display: flex; flex-direction: column; gap: 9px;
+            border: 1px solid #d1d9e0;
+            overflow-x: hidden;
+        }
+
+        .top-nav { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; flex-shrink: 0; }
+        .nav-btn {
+            border: 1px solid #e0e6ed; background-color: #f8fafc;
+            color: var(--text-main); border-radius: 10px; height: 34px;
+            font-size: 13px; font-family: var(--cm); font-weight: 800;
+            cursor: pointer; transition: 0.2s;
+        }
+        .nav-btn.active { background-color: var(--btn-primary); color: white; border-color: var(--btn-primary); }
+
+        .screen {
+            background-color: var(--screen-bg); border-radius: 16px;
+            border: 1px solid #dcdfe6; padding: 10px 14px;
+            display: flex; flex-direction: column; justify-content: center;
+            min-height: 88px; flex-shrink: 0;
+        }
+        .plot-info-area { display: none; flex-direction: column; gap: 5px; overflow: hidden; }
+        .latex-line {
+            width: 100%; overflow-x: auto; white-space: nowrap;
+            font-size: 17px; padding-bottom: 2px; border-bottom: 1px solid #f3f3f3;
+        }
+
+        @keyframes blink { 50% { opacity: 0; } }
+        .cursor-blink {
+            animation: blink 1.2s step-end infinite;
+            color: var(--btn-primary);
+            font-weight: 800;
+        }
+        .ghost-paren { color: #aaa; }
+        .base-missing { color: #c00; }
+        .const-sym { }
+
+        .vars-panel {
+            display: none; grid-template-columns: repeat(3, 1fr);
+            gap: 5px; flex-shrink: 0;
+        }
+        .var-card {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 1px; background: #f8fafc; border: 1.5px solid #e0e6ed;
+            border-radius: 10px; padding: 4px 6px; height: 50px;
+            cursor: pointer; transition: 0.15s; overflow: hidden;
+        }
+        .var-card.active {
+            background: #eef4fd; border-color: var(--btn-primary);
+            box-shadow: 0 0 0 2px rgba(74,144,226,0.18);
+        }
+        .var-card:hover:not(.active) { background: #f1f4f8; }
+        .var-name-cell {
+            font-size: 14px; font-family: var(--cm); font-weight: 700;
+            color: var(--text-main); display: flex; align-items: center; justify-content: center;
+            line-height: 1;
+        }
+        .var-expr-cell { display: none; }
+        .var-val-cell {
+            font-size: 13px; font-family: var(--cm); color: #555; font-weight: 700;
+            text-align: center; white-space: nowrap; overflow: hidden;
+            text-overflow: ellipsis; max-width: 100%; line-height: 1;
+        }
+        #var-btns-row { display: grid; grid-template-columns: repeat(6, 1fr) 1.9fr; gap: 6px; flex-shrink: 0; }
+        .btn-var-sm {
+            height: 26px; border: 1px solid #e0e6ed; border-radius: 8px;
+            background: #fff; cursor: pointer; transition: all 0.1s;
+            font-family: var(--cm); font-size: 13px; font-weight: 800;
+            color: #7c5cbf; font-style: italic; padding: 0;
+        }
+        .btn-var-sm:active { transform: scale(0.94); background-color: #f5f5f5; }
+        .btn-const {
+            font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-style: normal;
+            font-size: 12px; font-weight: 700; color: var(--btn-primary); white-space: nowrap;
+        }
+        .btn-const.active { background: var(--btn-primary); color: #fff; border-color: var(--btn-primary); }
+
+        #const-panel { display: none; flex: 1; min-height: 0; flex-direction: column; gap: 6px; }
+        .const-toolbar { display: grid; grid-template-columns: repeat(3, 1fr) 2fr; gap: 6px; flex-shrink: 0; }
+        .const-toolbar button { height: 36px; font-size: 17px; }
+        .const-toolbar .const-back { font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 14px; font-weight: 700; }
+        .const-list {
+            flex: 1; min-height: 0; overflow-y: auto; display: grid;
+            grid-template-columns: 1fr 1fr; gap: 6px; align-content: start;
+            touch-action: pan-y; overscroll-behavior: contain; padding-bottom: 4px;
+            position: relative; /* 收住 KaTeX 的绝对定位 MathML, 否则会撑长整个页面 */
+        }
+        .const-group-title {
+            grid-column: 1 / -1; padding: 4px 2px 0;
+            font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+            font-size: 12px; font-weight: 700; color: #8a94a3;
+        }
+        .const-cell {
+            position: relative; height: 44px; border-radius: 10px; padding: 0 8px; min-width: 0;
+            display: flex; align-items: center; justify-content: flex-start;
+            overflow: hidden; white-space: nowrap; font-size: 15px; font-weight: 400;
+            user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: pan-y;
+        }
+        .const-cell .c-sym { flex-shrink: 0; }
+        .const-cell .c-name {
+            min-width: 0; overflow: hidden; text-overflow: ellipsis; color: #444;
+            font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 13px;
+        }
+        .const-cell .c-val { display: none; font-size: 12px; color: var(--text-main); }
+        .const-cell.show-val { background: #eef4fd; border-color: var(--btn-primary); }
+        .const-cell.show-val .c-sym, .const-cell.show-val .c-name { display: none; }
+        .const-cell.show-val .c-val { display: block; }
+
+        .keyboard { flex: 1; display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; min-height: 0; }
+        .main-cursor-row { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; min-height: 0; }
+        button {
+            border: 1px solid #eaedf0; border-radius: 12px; background-color: #fff;
+            cursor: pointer; transition: all 0.1s;
+            font-family: var(--cm); font-size: 19px; font-weight: 800; color: var(--text-main);
+        }
+        button:active { transform: scale(0.94); background-color: #f5f5f5; }
+        .btn-func   { color: var(--btn-primary); font-style: italic; font-size: 21px; }
+        .btn-calc   { background-color: var(--btn-primary); color: white; font-size: 22px; border: none; }
+        .btn-danger { background-color: var(--btn-danger); color: white; border: none; }
+
+        .graph-area { flex: 1; display: none; flex-direction: column; gap: 8px; min-height: 0; }
+        .canvas-container {
+            flex: 1; background: white; border: 1px solid #dcdfe6; border-radius: 14px;
+            position: relative; overflow: hidden; touch-action: none;
+        }
+        canvas { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+
+        .axis-label {
+            position: absolute; font-size: 13px; color: #555; font-weight: 800; font-family: var(--cm);
+            background: rgba(255,255,255,0.85); padding: 2px 6px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .boundary-grid {
+            display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;
+            gap: 6px; background: #f1f3f4; padding: 8px; border-radius: 14px; flex-shrink: 0;
+        }
+        .boundary-grid.one-row { grid-template-rows: 1fr; }
+        .boundary-item {
+            display: flex; align-items: center;
+            background: white; padding: 3px 10px; border-radius: 8px; border: 1px solid #e0e6ed;
+        }
+        .boundary-item span { font-size: 11px; font-weight: 800; color: #555; width: 42px; font-family: var(--cm); }
+        .boundary-item input {
+            width: 100%; border: none; outline: none; text-align: right;
+            font-family: var(--cm); font-size: 14px; font-weight: 700;
+            background: transparent; color: var(--text-main);
+        }
+        input[type=number]::-webkit-inner-spin-button { opacity: 1; cursor: pointer; }
+
+        .root-results { flex: 1; overflow-y: auto; background: white; border-radius: 14px; padding: 12px; border: 1px solid #ddd; }
+        .root-katex-item { padding: 5px 0; border-bottom: 1px solid #f5f5f5; font-size: 18px; }
+
+        .fit-input-cell {
+            width: 100%; text-align: center; border: 1px solid #e0e6ed; border-radius: 8px;
+            padding: 6px; font-family: var(--cm); font-size: 15px; background: #fdfdfd;
+        }
+        .fit-input-cell:focus { outline: none; border-color: var(--btn-primary); }
+        /* 拟合结果容器：垂直堆叠 */
+.fit-result-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+    width: 100%;
+}
+
+/* 表达式：独占一行 */
+#fit-eq-display {
+    width: 100%;
+    min-height: 52px;
+    background: #fff;
+    border: 1px solid #e0e6ed;
+    border-radius: 12px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 17px;
+    padding: 5px;
+}
+
+/* 底部行：按钮与 r 并排 */
+.fit-bottom-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+/* r 变量格子样式 */
+.r-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #f8fafc;
+    border: 1.5px solid #e0e6ed;
+    border-radius: 12px;
+    height: 50px;
+}
+.r-label {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--text-main);
+    line-height: 1.2;
+}
+.r-value {
+    font-size: 13px;
+    color: #888; /* 灰体数值 */
+    font-weight: 700;
+}
+
+/* 拟合按钮高度微调，与r卡片对齐 */
+#btn-log-fit {
+    height: 50px;
+    margin: 0;
+    width: 100%;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+.stats-column {
+    border: 1px solid #e0e6ed;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #f8fafc;
+}
+.stats-column-title {
+    text-align: center;
+    font-size: 18px;
+    font-weight: 800;
+    padding: 8px;
+    color: var(--btn-primary);
+    border-bottom: 1px solid #e0e6ed;
+    background: #eef4fd;
+}
+.stats-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    min-height: 36px;
+    border-bottom: 1px solid #e8edf2;
+    font-size: 12px;
+    color: #555;
+}
+.stats-row:last-child { border-bottom: none; }
+.stats-row strong {
+    color: var(--text-main);
+    font-size: 13px;
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.matrix-panel {
+    display: none;
+    flex: 1;
+    min-height: 0;
+    flex-direction: column;
+    gap: 8px;
+}
+.matrix-calc-area, .matrix-def-area {
+    display: none;
+    flex: 1;
+    min-height: 0;
+    flex-direction: column;
+    gap: 8px;
+}
+.matrix-calc-display {
+    flex: 1 1 0;
+    background: var(--screen-bg);
+    border: 1px solid #dcdfe6;
+    border-radius: 14px;
+    padding: 10px 12px;
+    overflow: auto;
+    font-size: 18px;
+}
+.matrix-calc-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+    min-height: 0;
+}
+.matrix-calc-top {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 0 0 211px;
+    min-height: 0;
+}
+.matrix-calc-top .matrix-calc-display,
+.matrix-calc-top .matrix-answer {
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+}
+.matrix-calc-top .matrix-calc-display { flex: 0 0 56px; }
+.matrix-calc-top .matrix-answer { flex: 0 0 149px; }
+.matrix-answer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+    overflow: auto;
+    background: #fff;
+    border: 1px solid #e0e6ed;
+    border-radius: 12px;
+    padding: 8px 16px;
+    font-size: 18px;
+}
+.matrix-keypad {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+.matrix-answer .katex-display { margin: 0; min-width: max-content; }
+.matrix-key-row { display: grid; gap: 6px; flex: 1 1 0; min-height: 0; }
+.matrix-key-row.four { grid-template-columns: repeat(4, 1fr); }
+.matrix-key-row.five { grid-template-columns: repeat(5, 1fr); }
+.matrix-keypad button { min-height: 0; font-size: 16px; }
+.matrix-keypad .matrix-key-function { color: var(--btn-primary); font-size: 14px; }
+.matrix-power-select {
+    width: 100%;
+    height: 38px;
+    border: 1px solid #e0e6ed;
+    border-radius: 10px;
+    background: #fff;
+    font-family: var(--cm);
+    font-weight: 700;
+    text-align: center;
+}
+.matrix-def-head {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    flex-shrink: 0;
+}
+.matrix-def-head .nav-btn { height: 38px; }
+.matrix-def-meta {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+    gap: 8px;
+    align-items: center;
+    flex-shrink: 0;
+}
+.matrix-def-title {
+    font-size: 20px;
+    font-weight: 800;
+    padding-left: 4px;
+}
+.matrix-size-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+.matrix-size-control {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 5px;
+    background: #f8fafc;
+    border: 1px solid #e0e6ed;
+    border-radius: 10px;
+    padding: 4px 6px;
+    font-size: 12px;
+    font-weight: 800;
+}
+.matrix-size-control select {
+    width: 100%;
+    border: none;
+    background: transparent;
+    font-family: var(--cm);
+    font-weight: 800;
+    font-size: 14px;
+}
+.matrix-grid-wrap {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    background: #fff;
+    border: 1px solid #e0e6ed;
+    border-radius: 12px;
+    padding: 8px;
+}
+.matrix-grid {
+    display: grid;
+    gap: 6px;
+    width: max-content;
+    min-width: 100%;
+}
+.matrix-cell {
+    width: 76px;
+    height: 38px;
+    border: 1px solid #e0e6ed;
+    border-radius: 8px;
+    text-align: center;
+    font-family: var(--cm);
+    font-size: 15px;
+    background: #fdfdfd;
+}
+.matrix-cell:focus { outline: none; border-color: var(--btn-primary); }
+    </style>
+</head>
+<body>
+<div class="calculator">
+
+    <div class="top-nav">
+        <button id="nav-vars"  class="nav-btn" onclick="switchMode('vars')">变量</button>
+        <button id="nav-funcs" class="nav-btn" onclick="switchMode('funcs')">函数</button>
+        <button id="nav-main"  class="nav-btn active" onclick="switchMode('main')">计算</button>
+        <button id="nav-plot"  class="nav-btn" onclick="switchMode('plot')">绘图</button>
+        <button id="nav-roots" class="nav-btn" onclick="switchMode('roots')">求根</button>
+        <button id="nav-fit"   class="nav-btn" onclick="switchMode('fit')">统计</button>
+        <button id="nav-matrix" class="nav-btn" onclick="switchMode('matrix')">矩阵</button>
+    </div>
+
+    <div class="vars-panel" id="vars-panel">
+        <div class="var-card active" id="var-row-a" onclick="selectVar('a')"><div class="var-name-cell" id="vname-a"></div><div class="var-val-cell" id="vval-a">0</div></div>
+        <div class="var-card" id="var-row-b" onclick="selectVar('b')"><div class="var-name-cell" id="vname-b"></div><div class="var-val-cell" id="vval-b">0</div></div>
+        <div class="var-card" id="var-row-c" onclick="selectVar('c')"><div class="var-name-cell" id="vname-c"></div><div class="var-val-cell" id="vval-c">0</div></div>
+        <div class="var-card" id="var-row-x" onclick="selectVar('x')"><div class="var-name-cell" id="vname-x"></div><div class="var-val-cell" id="vval-x">0</div></div>
+        <div class="var-card" id="var-row-y" onclick="selectVar('y')"><div class="var-name-cell" id="vname-y"></div><div class="var-val-cell" id="vval-y">0</div></div>
+        <div class="var-card" id="var-row-z" onclick="selectVar('z')"><div class="var-name-cell" id="vname-z"></div><div class="var-val-cell" id="vval-z">0</div></div>
+    </div>
+
+    <div class="screen" id="main-screen">
+        <div id="single-line-display" style="font-size:20px;width:100%;overflow-x:auto;"></div>
+        <div class="plot-info-area" id="double-line-display">
+            <div class="latex-line" id="line-fx"></div><div class="latex-line" id="line-gx"></div>
+        </div>
+        <div id="calc-res-val" style="text-align:right;font-weight:800;font-size:20px;margin-top:5px;font-family:var(--cm);">0</div>
+    </div>
+
+    <div style="display:none;flex-direction:column;gap:8px;flex:1;" id="roots-panel">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <button class="nav-btn active" id="root-target-f" onclick="setRootTarget('f')">针对 f(x)</button>
+            <button class="nav-btn"        id="root-target-g" onclick="setRootTarget('g')">针对 g(x)</button>
+        </div>
+        <div class="boundary-grid one-row">
+            <div class="boundary-item"><span>Start</span><input type="number" id="rootX1" value="-10" step="1"></div>
+            <div class="boundary-item"><span>End</span>  <input type="number" id="rootX2" value="10"  step="1"></div>
+        </div>
+        <button class="btn-calc" style="font-size:16px;padding:8px;border-radius:12px;" onclick="calculateRoots()">执行求根</button>
+        <div class="root-results" id="root-list"></div>
+    </div>
+
+    <div class="graph-area" id="graph-area">
+        <div class="canvas-container" id="canvas-wrap">
+            <canvas id="plotCanvas"></canvas>
+        </div>
+        <div class="boundary-grid">
+            <div class="boundary-item"><span>X Min</span><input type="number" id="xMin" value="-10" step="1" onchange="syncFromInput()"></div>
+            <div class="boundary-item"><span>X Max</span><input type="number" id="xMax" value="10"  step="1" onchange="syncFromInput()"></div>
+            <div class="boundary-item"><span>Y Min</span><input type="number" id="yMin" value="-6"  step="1" onchange="syncFromInput()"></div>
+            <div class="boundary-item"><span>Y Max</span><input type="number" id="yMax" value="6"   step="1" onchange="syncFromInput()"></div>
+        </div>
+        <button id="btn-trace" class="nav-btn" onclick="toggleTrace()" style="height: 36px; margin-top: 2px; flex-shrink:0;">开启追踪</button>
+    </div>
+
+    <div id="fit-data-panel" style="display:none; flex-direction:column; gap:8px; flex:1; background:white; border-radius:14px; padding:12px; border:1px solid #ddd; overflow-y:hidden;">
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; text-align:center; font-size:14px; font-weight:800; color:#555; flex-shrink:0;">
+            <div>自变量 (x)</div>
+            <div>因变量 (y)</div>
+            <div>频次</div>
+        </div>
+        <div id="fit-rows" style="display:flex; flex-direction:column; gap:6px; flex:1; overflow-y:auto; padding-right:4px;"></div>
+        <div style="display:flex; gap:8px; flex-shrink:0; margin-top:4px;">
+    <button class="nav-btn" style="flex:1;" onclick="addFitRow()">+ 添行</button>
+    <button class="nav-btn" style="flex:1; border-color:var(--btn-danger); color:var(--btn-danger);" onclick="removeFitRow()">- 删行</button>
+    </div>
+    </div>
+
+    <div id="fit-stats-panel" style="display:none; flex-direction:column; gap:10px; flex:1; background:white; border-radius:14px; padding:12px; border:1px solid #ddd; overflow-y:auto;">
+        <div style="text-align:center; font-size:16px; font-weight:800; color:#555; flex-shrink:0;">变量统计</div>
+        <div class="stats-grid">
+            <div class="stats-column">
+                <div class="stats-column-title">x</div>
+                <div class="stats-row"><span>均值</span><strong id="stats-x-mean">---</strong></div>
+                <div class="stats-row"><span>方差 (<span id="stats-label-sx"></span>)</span><strong id="stats-x-variance">---</strong></div>
+                <div class="stats-row"><span>标准差 (<span id="stats-label-sigma-x"></span>)</span><strong id="stats-x-std">---</strong></div>
+                <div class="stats-row"><span>最大值</span><strong id="stats-x-max">---</strong></div>
+                <div class="stats-row"><span>最小值</span><strong id="stats-x-min">---</strong></div>
+                <div class="stats-row"><span>中位数</span><strong id="stats-x-median">---</strong></div>
+            </div>
+            <div class="stats-column">
+                <div class="stats-column-title">y</div>
+                <div class="stats-row"><span>均值</span><strong id="stats-y-mean">---</strong></div>
+                <div class="stats-row"><span>方差 (<span id="stats-label-sy"></span>)</span><strong id="stats-y-variance">---</strong></div>
+                <div class="stats-row"><span>标准差 (<span id="stats-label-sigma-y"></span>)</span><strong id="stats-y-std">---</strong></div>
+                <div class="stats-row"><span>最大值</span><strong id="stats-y-max">---</strong></div>
+                <div class="stats-row"><span>最小值</span><strong id="stats-y-min">---</strong></div>
+                <div class="stats-row"><span>中位数</span><strong id="stats-y-median">---</strong></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="fit-graph-panel" class="graph-area" style="display:none;">
+    <div class="canvas-container" id="fit-canvas-wrap">
+    <canvas id="fitCanvas"></canvas>
+    <div id="fit-axis-y" class="axis-label" style="top:5px; left:10px;">y</div>
+    <div id="fit-axis-x" class="axis-label" style="bottom:5px; right:10px;">x</div>
+</div>
+
+    <div class="boundary-grid">
+        <div class="boundary-item"><span>X Min</span><input type="number" id="fitXMin" value="-10" step="1" onchange="syncFitFromInput()"></div>
+        <div class="boundary-item"><span>X Max</span><input type="number" id="fitXMax" value="10"  step="1" onchange="syncFitFromInput()"></div>
+        <div class="boundary-item"><span>Y Min</span><input type="number" id="fitYMin" value="-6"  step="1" onchange="syncFitFromInput()"></div>
+        <div class="boundary-item"><span>Y Max</span><input type="number" id="fitYMax" value="6"   step="1" onchange="syncFitFromInput()"></div>
+    </div>
+
+    <div class="fit-result-container">
+        <div id="fit-eq-display"></div>
+
+        <div class="fit-bottom-row">
+            <button id="btn-log-fit" class="nav-btn" style="margin:0; width:100%; height:50px;" onclick="toggleLogFit()">取 Log₁₀</button>
+
+            <div class="r-card">
+                <div class="r-label">r</div>
+                <div id="fit-r-val-display" class="r-value">---</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <div id="matrix-panel" class="matrix-panel">
+        <div id="matrix-calc-area" class="matrix-calc-area">
+            <div class="matrix-calc-body">
+                <div class="matrix-calc-top">
+                    <div id="matrix-calc-display" class="matrix-calc-display"></div>
+                    <div id="matrix-answer" class="matrix-answer">---</div>
+                </div>
+                <div class="matrix-keypad">
+                    <div class="matrix-key-row four">
+                        <button onclick="appendMatrixToken('A')">A</button><button onclick="appendMatrixToken('B')">B</button><button onclick="appendMatrixToken('C')">C</button><button onclick="appendMatrixToken('D')">D</button>
+                    </div>
+                    <div class="matrix-key-row five">
+                        <button class="matrix-key-function" onclick="appendMatrixTranspose()">转置</button><button class="matrix-key-function" onclick="appendMatrixFunction('inv')">逆</button><button class="matrix-key-function" onclick="appendMatrixFunction('det')">行列式</button><button class="matrix-key-function" onclick="appendMatrixFunction('tr')">迹</button><button id="matrix-power-btn" class="matrix-key-function" onclick="appendMatrixToken('^')"></button>
+                    </div>
+                    <div class="matrix-key-row four">
+                        <button onclick="appendMatrixToken('(')">(</button><button onclick="appendMatrixToken(')')">)</button><button onclick="moveMatrixCursor(-1)">←</button><button onclick="moveMatrixCursor(1)">→</button>
+                    </div>
+                    <div class="matrix-key-row five">
+                        <button onclick="appendMatrixToken('7')">7</button><button onclick="appendMatrixToken('8')">8</button><button onclick="appendMatrixToken('9')">9</button><button class="btn-danger" onclick="deleteMatrixLast()">DEL</button><button class="btn-danger" onclick="clearMatrixCalc()">AC</button>
+                    </div>
+                    <div class="matrix-key-row five">
+                        <button onclick="appendMatrixToken('4')">4</button><button onclick="appendMatrixToken('5')">5</button><button onclick="appendMatrixToken('6')">6</button><button onclick="appendMatrixToken('*')">×</button><button onclick="appendMatrixToken('/')">÷</button>
+                    </div>
+                    <div class="matrix-key-row five">
+                        <button onclick="appendMatrixToken('1')">1</button><button onclick="appendMatrixToken('2')">2</button><button onclick="appendMatrixToken('3')">3</button><button onclick="appendMatrixToken('+')">+</button><button onclick="appendMatrixToken('-')">−</button>
+                    </div>
+                    <div class="matrix-key-row five">
+                        <button onclick="appendMatrixToken('0')">0</button><button onclick="appendMatrixToken('.')">.</button><button onclick="appendMatrixToken('*10^{}')">×10ⁿ</button><button onclick="appendMatrixToken('Ans')">Ans</button><button class="btn-calc" onclick="calculateMatrix()">=</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="matrix-def-area" class="matrix-def-area">
+            <div class="matrix-def-head">
+                <button class="nav-btn active" id="matrix-def-A" onclick="selectMatrix('A')">A</button>
+                <button class="nav-btn" id="matrix-def-B" onclick="selectMatrix('B')">B</button>
+                <button class="nav-btn" id="matrix-def-C" onclick="selectMatrix('C')">C</button>
+                <button class="nav-btn" id="matrix-def-D" onclick="selectMatrix('D')">D</button>
+            </div>
+            <div class="matrix-def-meta">
+                <div id="matrix-def-title" class="matrix-def-title"></div>
+                <div class="matrix-size-controls">
+                    <label class="matrix-size-control"><span>行</span><select id="matrix-rows" onchange="resizeMatrix()"></select></label>
+                    <label class="matrix-size-control"><span>列</span><select id="matrix-cols" onchange="resizeMatrix()"></select></label>
+                </div>
+            </div>
+            <div class="matrix-grid-wrap"><div id="matrix-grid" class="matrix-grid"></div></div>
+        </div>
+    </div>
+
+    <div id="funcs-subnav" style="display:none; grid-template-columns:1fr 1fr; gap:6px; flex-shrink:0;">
+        <button class="nav-btn active" id="func-target-f" onclick="setFuncTarget('f')">编辑 f(x)</button>
+        <button class="nav-btn"        id="func-target-g" onclick="setFuncTarget('g')">编辑 g(x)</button>
+    </div>
+
+    <div id="fit-subnav" style="display:none; grid-template-columns:1fr 1fr 1fr; gap:6px; flex-shrink:0;">
+        <button class="nav-btn active" id="fit-target-data" onclick="setFitTarget('data')">数据</button>
+        <button class="nav-btn"        id="fit-target-graph" onclick="setFitTarget('graph')">拟合</button>
+        <button class="nav-btn"        id="fit-target-stats" onclick="setFitTarget('stats')">变量统计</button>
+    </div>
+
+    <div id="matrix-subnav" style="display:none; grid-template-columns:1fr 1fr; gap:6px; flex-shrink:0;">
+        <button class="nav-btn active" id="matrix-target-calc" onclick="setMatrixTarget('calc')">计算</button>
+        <button class="nav-btn" id="matrix-target-def" onclick="setMatrixTarget('def')">定义</button>
+    </div>
+
+    <div id="var-btns-row">
+        <button class="btn-var-sm" onclick="append('a')">a</button>
+        <button class="btn-var-sm" onclick="append('b')">b</button>
+        <button class="btn-var-sm" onclick="append('c')">c</button>
+        <button class="btn-var-sm" onclick="append('x')">x</button>
+        <button class="btn-var-sm" onclick="append('y')">y</button>
+        <button class="btn-var-sm" onclick="append('z')">z</button>
+        <button class="btn-var-sm btn-const" id="btn-const" onclick="toggleConstPanel()">物理常数</button>
+    </div>
+
+    <div class="keyboard" id="keyboard-area">
+        <button class="btn-func" onclick="append('f(')">f<span style="font-style:normal;">(x)</span></button>
+        <button class="btn-func" onclick="append('g(')">g<span style="font-style:normal;">(x)</span></button>
+        <button onclick="append('int(')">∫</button>
+        <button onclick="append('deriv(')">d/dx</button>
+        <button onclick="append('x')">x</button>
+
+        <button onclick="append('sqrt(')">√</button>
+        <button onclick="append('frac(')" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1.5px; padding-top:2px;">
+            <div style="width:11px; height:11px; border:1.5px solid currentColor; box-sizing:border-box;"></div>
+            <div style="width:16px; height:2px; background-color:currentColor;"></div>
+            <div style="width:11px; height:11px; border:1.5px solid currentColor; box-sizing:border-box;"></div>
+        </button>
+        <button onclick="append('^{}')">xⁿ</button>
+        <button onclick="append('log10(')">lg</button>
+        <button onclick="append('log(')">ln</button>
+
+        <button onclick="append('sin(')">sin</button>
+        <button onclick="append('cos(')">cos</button>
+        <button onclick="append('tan(')">tan</button>
+        <button onclick="append('pi')">π</button>
+        <button onclick="append('e')">e</button>
+
+        <div class="main-cursor-row">
+            <button onclick="append('(')">(</button>
+            <button onclick="append(')')">)</button>
+            <button onclick="moveCursor(-1)">←</button>
+            <button onclick="moveCursor(1)">→</button>
+        </div>
+
+        <button onclick="append('7')">7</button>
+        <button onclick="append('8')">8</button>
+        <button onclick="append('9')">9</button>
+        <button class="btn-danger" onclick="deleteLast()">DEL</button>
+        <button class="btn-danger" onclick="clearAll()">AC</button>
+
+        <button onclick="append('4')">4</button>
+        <button onclick="append('5')">5</button>
+        <button onclick="append('6')">6</button>
+        <button onclick="append('*')">×</button>
+        <button onclick="append('/')">÷</button>
+
+        <button onclick="append('1')">1</button>
+        <button onclick="append('2')">2</button>
+        <button onclick="append('3')">3</button>
+        <button onclick="append('+')">+</button>
+        <button onclick="append('-')">-</button>
+
+        <button onclick="append('0')">0</button>
+        <button onclick="append('.')">.</button>
+        <button onclick="append('*10^{}')">×10ⁿ</button>
+        <button onclick="append('Ans')">Ans</button>
+        <button class="btn-calc" onclick="calculate()">=</button>
+    </div>
+
+    <div id="const-panel">
+        <div class="const-toolbar">
+            <button onclick="moveCursor(-1)">←</button>
+            <button onclick="moveCursor(1)">→</button>
+            <button class="btn-danger" onclick="deleteLast()">DEL</button>
+            <button class="const-back" onclick="toggleConstPanel()">返回键盘</button>
+        </div>
+        <div class="const-list" id="const-list"></div>
+    </div>
+</div>
+
+<script>
+// ===== 内联模块: tools/constants-data.js 与 tools/editor-core.js (不含 Node 自检段) =====
+/* WebCASIO - 物理/数学常数数据层 (S1)
+ * 全部数值采用 SI 单位制下的纯数值, 不带单位.
+ * 收录 CASIO fx-991CN CW 内置的 47 个物理常数 + 6 个重要数学常数.
+ *
+ * 字段说明:
+ *   id    内部唯一标识 (原子字符的载荷, 如 'eps0')
+ *   tex   KaTeX 片段, 用于公式框与面板按钮显示
+ *   name  中文名称
+ *   v     数值字面量字符串 (SI 纯数值). mathjs 可直接解析
+ *   grade 精度等级:
+ *           'exact'    SI 定义的精确值
+ *           'derived'  由精确值推导, 这里给到 17 位有效数字
+ *           'measured' CODATA 2018 实测值, 只有公布位数 (普遍少于 15 位)
+ *           'math'     数学常数, 给到 20 位以上
+ *   group 分组键
+ *
+ * 导出: CONSTANTS, CONST_BY_ID, CONST_GROUPS, constCode(id), constSciParts(id, sig)
+ */
+(function (root, factory) {
+  var api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else {
+    root.ConstantsData = api;
+    root.CONSTANTS = api.CONSTANTS;
+    root.CONST_BY_ID = api.CONST_BY_ID;
+    root.CONST_GROUPS = api.CONST_GROUPS;
+    root.constCode = api.constCode;
+    root.constSciParts = api.constSciParts;
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  'use strict';
+
+  var GROUP_LABELS = {
+    universal: '普适常数',
+    em: '电磁学常数',
+    atomic: '原子与核物理常数',
+    physchem: '物理化学常数',
+    adopted: '约定值',
+    other: '其他',
+    math: '数学常数'
+  };
+
+  var CONSTANTS = [
+    // ---- 普适常数 ----
+    { id: 'h',       tex: 'h',            name: '普朗克常数',        v: '6.62607015e-34',            grade: 'exact',    group: 'universal' },
+    { id: 'hbar',    tex: '\\hbar',       name: '约化普朗克常数',    v: '1.0545718176461565e-34',    grade: 'derived',  group: 'universal' },
+    { id: 'c0',      tex: 'c_0',          name: '真空中光速',        v: '299792458',                 grade: 'exact',    group: 'universal' },
+    { id: 'eps0',    tex: '\\varepsilon_0', name: '真空电容率',      v: '8.8541878128e-12',          grade: 'measured', group: 'universal' },
+    { id: 'mu0',     tex: '\\mu_0',       name: '真空磁导率',        v: '1.25663706212e-6',          grade: 'measured', group: 'universal' },
+    { id: 'Z0',      tex: 'Z_0',          name: '真空特征阻抗',      v: '376.730313668',             grade: 'measured', group: 'universal' },
+    { id: 'G',       tex: 'G',            name: '万有引力常数',      v: '6.67430e-11',               grade: 'measured', group: 'universal' },
+    { id: 'lP',      tex: 'l_P',          name: '普朗克长度',        v: '1.616255e-35',              grade: 'measured', group: 'universal' },
+    { id: 'tP',      tex: 't_P',          name: '普朗克时间',        v: '5.391247e-44',              grade: 'measured', group: 'universal' },
+
+    // ---- 电磁学常数 ----
+    { id: 'muN',     tex: '\\mu_N',       name: '核磁子',            v: '5.0507837461e-27',          grade: 'measured', group: 'em' },
+    { id: 'muB',     tex: '\\mu_B',       name: '玻尔磁子',          v: '9.2740100783e-24',          grade: 'measured', group: 'em' },
+    { id: 'qe',      tex: 'e',            name: '元电荷',            v: '1.602176634e-19',           grade: 'exact',    group: 'em' },
+    { id: 'Phi0',    tex: '\\Phi_0',      name: '磁通量子',          v: '2.0678338484619295e-15',    grade: 'derived',  group: 'em' },
+    { id: 'G0',      tex: 'G_0',          name: '电导量子',          v: '7.7480917298636487e-5',     grade: 'derived',  group: 'em' },
+    { id: 'KJ',      tex: 'K_J',          name: '约瑟夫森常数',      v: '4.8359784841698363e14',     grade: 'derived',  group: 'em' },
+    { id: 'RK',      tex: 'R_K',          name: '冯·克利青常数',     v: '2.5812807459304513e4',      grade: 'derived',  group: 'em' },
+
+    // ---- 原子与核物理常数 ----
+    { id: 'mp',      tex: 'm_p',          name: '质子质量',          v: '1.67262192369e-27',         grade: 'measured', group: 'atomic' },
+    { id: 'mn',      tex: 'm_n',          name: '中子质量',          v: '1.67492749804e-27',         grade: 'measured', group: 'atomic' },
+    { id: 'me',      tex: 'm_e',          name: '电子质量',          v: '9.1093837015e-31',          grade: 'measured', group: 'atomic' },
+    { id: 'mmu',     tex: 'm_\\mu',       name: 'μ 子质量',          v: '1.883531627e-28',           grade: 'measured', group: 'atomic' },
+    { id: 'mtau',    tex: 'm_\\tau',      name: 'τ 子质量',          v: '3.16754e-27',               grade: 'measured', group: 'atomic' },
+    { id: 'a0',      tex: 'a_0',          name: '玻尔半径',          v: '5.29177210903e-11',         grade: 'measured', group: 'atomic' },
+    { id: 'alpha',   tex: '\\alpha',      name: '精细结构常数',      v: '7.2973525693e-3',           grade: 'measured', group: 'atomic' },
+    { id: 're',      tex: 'r_e',          name: '经典电子半径',      v: '2.8179403262e-15',          grade: 'measured', group: 'atomic' },
+    { id: 'lamC',    tex: '\\lambda_C',   name: '康普顿波长',        v: '2.42631023867e-12',         grade: 'measured', group: 'atomic' },
+    { id: 'gammap',  tex: '\\gamma_p',    name: '质子旋磁比',        v: '2.6752218744e8',            grade: 'measured', group: 'atomic' },
+    { id: 'lamCp',   tex: '\\lambda_{C,p}', name: '质子康普顿波长',  v: '1.32140985539e-15',         grade: 'measured', group: 'atomic' },
+    { id: 'lamCn',   tex: '\\lambda_{C,n}', name: '中子康普顿波长',  v: '1.31959090581e-15',         grade: 'measured', group: 'atomic' },
+    { id: 'Rinf',    tex: 'R_\\infty',    name: '里德伯常数',        v: '10973731.568160',           grade: 'measured', group: 'atomic' },
+    { id: 'mup',     tex: '\\mu_p',       name: '质子磁矩',          v: '1.41060679736e-26',         grade: 'measured', group: 'atomic' },
+    { id: 'mue',     tex: '\\mu_e',       name: '电子磁矩',          v: '-9.2847647043e-24',         grade: 'measured', group: 'atomic' },
+    { id: 'mun',     tex: '\\mu_n',       name: '中子磁矩',          v: '-9.6623651e-27',            grade: 'measured', group: 'atomic' },
+    { id: 'mumu',    tex: '\\mu_\\mu',    name: 'μ 子磁矩',          v: '-4.49044830e-26',           grade: 'measured', group: 'atomic' },
+
+    // ---- 物理化学常数 ----
+    { id: 'mu_u',    tex: 'm_u',          name: '原子质量常数',      v: '1.66053906660e-27',         grade: 'measured', group: 'physchem' },
+    { id: 'NA',      tex: 'N_A',          name: '阿伏伽德罗常数',    v: '6.02214076e23',             grade: 'exact',    group: 'physchem' },
+    { id: 'k',       tex: 'k',            name: '玻尔兹曼常数',      v: '1.380649e-23',              grade: 'exact',    group: 'physchem' },
+    { id: 'F',       tex: 'F',            name: '法拉第常数',        v: '9.6485332123310014e4',      grade: 'derived',  group: 'physchem' },
+    { id: 'Rgas',    tex: 'R',            name: '摩尔气体常数',      v: '8.3144626181532395',        grade: 'derived',  group: 'physchem' },
+    { id: 'Vm',      tex: 'V_m',          name: '理想气体摩尔体积',  v: '2.2413969545014137e-2',     grade: 'derived',  group: 'physchem' },
+    { id: 'c1',      tex: 'c_1',          name: '第一辐射常数',      v: '3.7417718521927573e-16',    grade: 'derived',  group: 'physchem' },
+    { id: 'c2',      tex: 'c_2',          name: '第二辐射常数',      v: '1.4387768775039337e-2',     grade: 'derived',  group: 'physchem' },
+    { id: 'sigma',   tex: '\\sigma',      name: '斯特藩-玻尔兹曼常数', v: '5.6703744191844301e-8',   grade: 'derived',  group: 'physchem' },
+
+    // ---- 约定值 ----
+    { id: 'gn',      tex: 'g_n',          name: '标准重力加速度',    v: '9.80665',                   grade: 'exact',    group: 'adopted' },
+    { id: 'atm',     tex: '\\mathrm{atm}', name: '标准大气压',       v: '101325',                    grade: 'exact',    group: 'adopted' },
+    { id: 'RK90',    tex: 'R_{K\\text{-}90}', name: '约定冯·克利青常数', v: '25812.807',            grade: 'exact',    group: 'adopted' },
+    { id: 'KJ90',    tex: 'K_{J\\text{-}90}', name: '约定约瑟夫森常数', v: '483597.9e9',            grade: 'exact',    group: 'adopted' },
+
+    // ---- 其他 ----
+    { id: 't0',      tex: 't',            name: '冰点热力学温度',    v: '273.15',                    grade: 'exact',    group: 'other' },
+
+    // ---- 数学常数 ----
+    { id: 'pi',      tex: '\\pi',         name: '圆周率',            v: 'pi',                        grade: 'math',     group: 'math' },
+    { id: 'e',       tex: '\\mathrm{e}',  name: '自然常数',          v: 'e',                         grade: 'math',     group: 'math' },
+    { id: 'egamma',  tex: '\\gamma',      name: '欧拉-马歇罗尼常数', v: '0.57721566490153286061',    grade: 'math',     group: 'math' },
+    { id: 'phi',     tex: '\\varphi',     name: '黄金分割比',        v: '1.6180339887498948482',     grade: 'math',     group: 'math' },
+    { id: 'catalan', tex: 'K_{\\mathrm{C}}', name: '卡塔兰常数',     v: '0.91596559417721901505',    grade: 'math',     group: 'math' },
+    { id: 'zeta3',   tex: '\\zeta(3)',    name: '阿培里常数',        v: '1.2020569031595942854',     grade: 'math',     group: 'math' }
+  ];
+
+  var CONST_BY_ID = Object.create(null);
+  for (var i = 0; i < CONSTANTS.length; i++) CONST_BY_ID[CONSTANTS[i].id] = CONSTANTS[i];
+
+  var GROUP_ORDER = ['universal', 'em', 'atomic', 'physchem', 'adopted', 'other', 'math'];
+  var CONST_GROUPS = GROUP_ORDER.map(function (g) {
+    return {
+      key: g,
+      label: GROUP_LABELS[g],
+      items: CONSTANTS.filter(function (c) { return c.group === g; })
+    };
+  });
+
+  /* 返回可直接拼进求值字符串的操作数.
+   * pi / e 走 mathjs 的内置符号, 其余用数值字面量; 负值加括号避免 "3-" 式歧义. */
+  function constCode(id) {
+    var c = CONST_BY_ID[id];
+    if (!c) return 'NaN';
+    if (c.v === 'pi' || c.v === 'e') return c.v;
+    return c.v.charAt(0) === '-' ? '(' + c.v + ')' : c.v;
+  }
+
+  /* 面板长按时显示的科学记数法. 返回 {mant, exp, tex}.
+   * sig 为有效数字位数, 默认 10. */
+  function constSciParts(id, sig) {
+    var c = CONST_BY_ID[id];
+    if (!c) return null;
+    var n = (c.v === 'pi') ? Math.PI : (c.v === 'e') ? Math.E : Number(c.v);
+    var s = n.toExponential(Math.max(0, (sig || 10) - 1));
+    var m = /^(-?\d(?:\.\d+)?)e([+-]\d+)$/.exec(s);
+    if (!m) return { mant: String(n), exp: '0', tex: String(n) };
+    var mant = m[1].replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
+    var exp = String(parseInt(m[2], 10));
+    return {
+      mant: mant,
+      exp: exp,
+      tex: exp === '0' ? mant : mant + '\\times 10^{' + exp + '}'
+    };
+  }
+
+  return {
+    CONSTANTS: CONSTANTS,
+    CONST_BY_ID: CONST_BY_ID,
+    CONST_GROUPS: CONST_GROUPS,
+    GROUP_LABELS: GROUP_LABELS,
+    constCode: constCode,
+    constSciParts: constSciParts
+  };
+});
+
+/* WebCASIO structured formula editor core (tree model).
+   Every visible element is one indivisible item: inserted once, deleted once.
+   The serialized mathjs string of each editor is pushed out through onChange
+   (by default into state.expr.main/fx/gx and varExprs.a..z of index.html).
+
+   Browser: load tools/constants-data.js first, then this file -> globalThis.EditorCore
+            (no other globals are created or overwritten).
+   Node:    var EC = require('./editor-core.js');
+   Self test: node tools/editor-core.js --selftest
+
+   Source is ASCII only; non-ASCII text must be written as \uXXXX escapes. */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) {
+    module.exports = factory(require('./constants-data.js'));
+  } else {
+    root.EditorCore = factory(null);
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (deps) {
+  'use strict';
+
+  /* ---------------- constants ---------------- */
+  var EMPTY_MARK = '\u0000';   // empty slot marker: guarantees a syntax error on evaluation
+  var CUR_TEX = '\\htmlClass{cursor-blink}{|}';
+  var SQ_TEX = '\\square';
+  var SQ_CUR_TEX = '\\htmlClass{cursor-blink}{\\square}';
+  var GHOST_CLOSE_TEX = '\\right.\\htmlClass{ghost-paren}{)}';
+  var BASE_MISSING_TEX = '\\htmlClass{base-missing}{\\square}';
+
+  var NODE_SLOTS = { frac: 2, sqrt: 1, int: 3, deriv: 2, pow: 1, sci: 1 };
+  // node types whose rendering needs \left( \right) when used as a power base
+  var PW_TYPES = { frac: true, pow: true, sci: true, int: true, deriv: true };
+  var FN_INPUT = { 'sin(': 'sin', 'cos(': 'cos', 'tan(': 'tan', 'log10(': 'log10', 'log(': 'log', 'f(': 'f', 'g(': 'g' };
+  var FN_TEX = { '': '', sin: '\\sin', cos: '\\cos', tan: '\\tan', log10: '\\lg', log: '\\ln', f: 'f', g: 'g' };
+  var NODE_INPUT = { 'sqrt(': 'sqrt', 'frac(': 'frac', 'int(': 'int', 'deriv(': 'deriv' };
+  var OP_TEX = { '+': '+', '-': '-', '*': '\\times ', '/': '\\div ' };
+  var VARS = { a: 1, b: 1, c: 1, x: 1, y: 1, z: 1 };
+
+  function has(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
+
+  /* ---------------- constants data (lazy in the browser) ---------------- */
+  function cdata() {
+    if (deps) return deps;
+    var g = typeof globalThis !== 'undefined' ? globalThis : null;
+    if (g && g.ConstantsData) { deps = g.ConstantsData; return deps; }
+    try {
+      if (typeof constCode === 'function' && typeof CONST_BY_ID !== 'undefined') {
+        return { constCode: constCode, CONST_BY_ID: CONST_BY_ID };
+      }
+    } catch (err) { /* ignore */ }
+    return null;
+  }
+  function constInfo(id) {
+    var d = cdata();
+    if (d && d.CONST_BY_ID && has(d.CONST_BY_ID, id)) return d.CONST_BY_ID[id];
+    return null;
+  }
+  function constSer(id) {
+    var d = cdata();
+    if (d && typeof d.constCode === 'function') return d.constCode(id);
+    if (id === 'e' || id === 'pi') return id;
+    return 'NaN';
+  }
+  function constTex(id) {
+    var info = constInfo(id);
+    if (info && info.tex) return info.tex;
+    if (id === 'e') return '\\mathrm{e}';
+    if (id === 'pi') return '\\pi';
+    return '\\mathrm{?}';
+  }
+
+  /* ---------------- tree basics ---------------- */
+  function makeNode(t) {
+    var n = { t: t, s: [] };
+    for (var i = 0; i < NODE_SLOTS[t]; i++) n.s.push([]);
+    return n;
+  }
+  function isNode(it) { return !!(it && it.s); }
+  function newEditor() { var r = []; return { root: r, cur: { block: r, idx: 0 } }; }
+
+  var editors = {};
+  ['main', 'fx', 'gx'].forEach(function (k) { editors[k] = newEditor(); });
+  ['a', 'b', 'c', 'x', 'y', 'z'].forEach(function (k) { editors['var_' + k] = newEditor(); });
+
+  /* ---------------- host integration ---------------- */
+  function defaultGetKey() {
+    try {
+      if (typeof state !== 'undefined' && state) {
+        if (state.mode === 'funcs') return state.funcTarget === 'f' ? 'fx' : 'gx';
+        if (state.mode === 'vars') {
+          var v = (typeof activeVar !== 'undefined' && activeVar) ? activeVar : 'a';
+          return 'var_' + v;
+        }
+      }
+    } catch (err) { /* ignore */ }
+    return 'main';
+  }
+  function defaultOnChange(key, ser) {
+    try {
+      if (key === 'main' || key === 'fx' || key === 'gx') {
+        if (typeof state !== 'undefined' && state && state.expr) state.expr[key] = ser;
+      } else if (key.indexOf('var_') === 0) {
+        if (typeof varExprs !== 'undefined' && varExprs) varExprs[key.slice(4)] = ser;
+      }
+    } catch (err) { /* ignore */ }
+  }
+  var cfg = { getKey: null, onChange: null };
+  var pinnedKey = null;
+
+  function configure(opts) {
+    opts = opts || {};
+    if (has(opts, 'getKey')) cfg.getKey = typeof opts.getKey === 'function' ? opts.getKey : null;
+    if (has(opts, 'onChange')) cfg.onChange = typeof opts.onChange === 'function' ? opts.onChange : null;
+  }
+  function ensure(k) { if (!has(editors, k)) editors[k] = newEditor(); return editors[k]; }
+  function setKey(k) { pinnedKey = (k === null || k === undefined) ? null : String(k); if (pinnedKey) ensure(pinnedKey); }
+  function activeEditorKey() {
+    var k = pinnedKey || (cfg.getKey ? cfg.getKey() : defaultGetKey()) || 'main';
+    ensure(k);
+    return k;
+  }
+  function ed(k) { return ensure(k === undefined || k === null ? activeEditorKey() : k); }
+  function notify(k) {
+    var ser = serialize(k);
+    if (cfg.onChange) { try { cfg.onChange(k, ser); } catch (err) { /* ignore */ } }
+    else defaultOnChange(k, ser);
+  }
+
+  /* ---------------- bracket matching ---------------- */
+  function matchCloseIdx(block, i) {
+    var depth = 0;
+    for (var j = i; j < block.length; j++) {
+      if (block[j].t === 'open') depth++;
+      else if (block[j].t === 'close') { depth--; if (depth === 0) return j; }
+    }
+    return -1;
+  }
+  // index of an open bracket left of idx that has no close bracket at all, else -1
+  function pendingOpenIdx(block, idx) {
+    var stack = [];
+    for (var j = 0; j < idx; j++) {
+      if (block[j].t === 'open') stack.push(j);
+      else if (block[j].t === 'close') stack.pop();
+    }
+    while (stack.length) {
+      var k = stack.pop();
+      if (matchCloseIdx(block, k) === -1) return k;
+    }
+    return -1;
+  }
+  function unclosedCount(block) {
+    var depth = 0;
+    for (var j = 0; j < block.length; j++) {
+      if (block[j].t === 'open') depth++;
+      else if (block[j].t === 'close' && depth > 0) depth--;
+    }
+    return depth;
+  }
+
+  /* ---------------- parent lookup ---------------- */
+  function findParent(rootBlock, block) {
+    function walk(blk) {
+      for (var i = 0; i < blk.length; i++) {
+        var it = blk[i];
+        if (!isNode(it)) continue;
+        for (var si = 0; si < it.s.length; si++) {
+          if (it.s[si] === block) return { node: it, slot: si, parentBlock: blk, nodeIdx: i };
+          var r = walk(it.s[si]);
+          if (r) return r;
+        }
+      }
+      return null;
+    }
+    return walk(rootBlock);
+  }
+  function blockEmpty(b) { return b.length === 0; }
+  function allSlotsEmpty(n) { return n.s.every(blockEmpty); }
+
+  /* ---------------- linear scan helpers (shared by TeX and serializer) ----------------
+     part = { k:'digit'|'operand'|'op'|'cursor', s:string, pw:needs parens as power base,
+              frac:is a fraction } */
+  function takeBase(parts) {
+    var j = parts.length - 1;
+    var trail = [];
+    while (j >= 0 && parts[j].k === 'cursor') { trail.unshift(parts[j].s); j--; }
+    if (j < 0) return null;
+    if (parts[j].k === 'operand') {
+      var p = parts[j];
+      parts.length = j;
+      return { s: p.s, pw: !!p.pw, trail: trail.join('') };
+    }
+    if (parts[j].k === 'digit') {
+      var st = j;
+      var buf = [];
+      while (st >= 0 && (parts[st].k === 'digit' || parts[st].k === 'cursor')) { buf.unshift(parts[st].s); st--; }
+      parts.length = st + 1;
+      return { s: buf.join(''), pw: false, trail: trail.join('') };
+    }
+    return null;
+  }
+
+  /* ---------------- serializer (mathjs code) ---------------- */
+  function serBlock(block) {
+    var stack = [{ fn: '', parts: [] }];
+    function top() { return stack[stack.length - 1]; }
+    function add(k, s) { top().parts.push({ k: k, s: s, pw: false }); }
+    function closeFrame() {
+      var fr = stack.pop();
+      var inner = joinParts(fr.parts);
+      var body = inner === '' ? EMPTY_MARK : inner;
+      add('operand', fr.fn + '(' + body + ')');
+    }
+    for (var i = 0; i < block.length; i++) {
+      var it = block[i];
+      if (it.t === 'd') add('digit', it.v);
+      else if (it.t === 'op') add('op', it.v);
+      else if (it.t === 'var') add('operand', it.v);
+      else if (it.t === 'ans') add('operand', 'Ans');
+      else if (it.t === 'const') add('operand', constSer(it.id));
+      else if (it.t === 'open') stack.push({ fn: it.fn, parts: [] });
+      else if (it.t === 'close') { if (stack.length > 1) closeFrame(); }
+      else if (it.t === 'pow' || it.t === 'sci') {
+        var base = takeBase(top().parts);
+        var expCode = serSlot(it.s[0]);
+        if (it.t === 'pow') add('operand', '((' + (base ? base.s : EMPTY_MARK) + ')^(' + expCode + '))');
+        else add('operand', '((' + (base ? base.s : '1') + ')*10^(' + expCode + '))');
+      } else if (isNode(it)) {
+        add('operand', serNode(it));
+      }
+    }
+    while (stack.length > 1) closeFrame();   // auto-close missing right brackets
+    return joinParts(stack[0].parts);
+  }
+  function serSlot(b) { var s = serBlock(b); return s === '' ? EMPTY_MARK : s; }
+  function serNode(n) {
+    if (n.t === 'frac') return '((' + serSlot(n.s[0]) + ')/(' + serSlot(n.s[1]) + '))';
+    if (n.t === 'sqrt') return 'sqrt((' + serSlot(n.s[0]) + '))';
+    if (n.t === 'int') return 'int((' + serSlot(n.s[0]) + '),(' + serSlot(n.s[1]) + '),(' + serSlot(n.s[2]) + '))';
+    if (n.t === 'deriv') return 'deriv((' + serSlot(n.s[0]) + '),(' + serSlot(n.s[1]) + '))';
+    return EMPTY_MARK;
+  }
+  // Join parts into code. Adjacent operands get an explicit '*', and the whole
+  // implicit product is parenthesized so it binds tighter than * and / (1/2pi = 1/(2pi)).
+  // Digits only merge with a directly preceding digit, so x 2 -> (x*2), 2 x -> (2*x).
+  function joinParts(parts) {
+    var merged = [];
+    for (var i = 0; i < parts.length; i++) {
+      var p = parts[i];
+      if (p.k === 'cursor') continue;
+      var last = merged.length ? merged[merged.length - 1] : null;
+      if (p.k === 'digit' && last && last.k === 'num' && last.isDigit) last.s += p.s;
+      else if (p.k === 'digit') merged.push({ k: 'num', s: p.s, isDigit: true });
+      else if (p.k === 'op') merged.push({ k: 'op', s: p.s });
+      else merged.push({ k: 'num', s: p.s, isDigit: false });
+    }
+    var out = '';
+    var j = 0;
+    while (j < merged.length) {
+      if (merged[j].k === 'op') { out += merged[j].s; j++; continue; }
+      var run = [];
+      while (j < merged.length && merged[j].k === 'num') { run.push(merged[j].s); j++; }
+      out += run.length === 1 ? run[0] : '(' + run.join('*') + ')';
+    }
+    return out;
+  }
+  function serializeRoot(rootBlock) { return serBlock(rootBlock); }
+
+  /* ---------------- TeX renderer ---------------- */
+  // \cdot is inserted between digit->fraction and operand->digit (cursor parts are transparent).
+  function joinTex(parts) {
+    var out = '';
+    var prev = null;
+    for (var i = 0; i < parts.length; i++) {
+      var p = parts[i];
+      if (p.k === 'cursor') { out += p.s; continue; }
+      if (prev) {
+        if (p.k === 'digit' && prev.k === 'operand') out += '\\cdot ';
+        else if (p.k === 'operand' && p.frac && prev.k === 'digit') out += '\\cdot ';
+      }
+      out += p.s;
+      prev = p;
+    }
+    return out;
+  }
+  function texSlot(b, cur) {
+    if (b.length === 0) return (cur && cur.block === b) ? SQ_CUR_TEX : SQ_TEX;
+    return texBlock(b, cur);
+  }
+  function texNode(n, cur) {
+    if (n.t === 'frac') return '\\frac{' + texSlot(n.s[0], cur) + '}{' + texSlot(n.s[1], cur) + '}';
+    if (n.t === 'sqrt') return '\\sqrt{' + texSlot(n.s[0], cur) + '}';
+    if (n.t === 'int') {
+      return '\\int_{' + texSlot(n.s[1], cur) + '}^{' + texSlot(n.s[2], cur) + '} ' +
+        texSlot(n.s[0], cur) + '\\,\\mathrm{d}x';
+    }
+    if (n.t === 'deriv') {
+      return '\\left.\\frac{\\mathrm{d}}{\\mathrm{d}x}\\left(' + texSlot(n.s[0], cur) +
+        '\\right)\\right|_{x=' + texSlot(n.s[1], cur) + '}';
+    }
+    return SQ_TEX;
+  }
+  function texBlock(block, cur) {
+    var hasCur = !!(cur && cur.block === block);
+    var stack = [{ fn: '', parts: [] }];
+    function top() { return stack[stack.length - 1]; }
+    function add(k, s, pw, frac) { top().parts.push({ k: k, s: s, pw: !!pw, frac: !!frac }); }
+    function closeFrame(closed) {
+      var fr = stack.pop();
+      var inner = joinTex(fr.parts);
+      var body = inner === '' ? SQ_TEX : inner;
+      var fnt = has(FN_TEX, fr.fn) ? FN_TEX[fr.fn] : '';
+      add('operand', fnt + '\\left(' + body + (closed ? '\\right)' : GHOST_CLOSE_TEX), false);
+    }
+    for (var i = 0; i <= block.length; i++) {
+      if (hasCur && cur.idx === i) add('cursor', CUR_TEX);
+      if (i === block.length) break;
+      var it = block[i];
+      if (it.t === 'd') add('digit', it.v);
+      else if (it.t === 'op') add('op', OP_TEX[it.v] || it.v);
+      else if (it.t === 'var') add('operand', it.v);
+      else if (it.t === 'ans') add('operand', '\\mathrm{Ans}');
+      else if (it.t === 'const') add('operand', '\\htmlClass{const-sym}{' + constTex(it.id) + '}');
+      else if (it.t === 'open') stack.push({ fn: it.fn, parts: [] });
+      else if (it.t === 'close') { if (stack.length > 1) closeFrame(true); }
+      else if (it.t === 'pow' || it.t === 'sci') {
+        var base = takeBase(top().parts);
+        var ex = texSlot(it.s[0], cur);
+        var s;
+        if (base) {
+          var bs = '{' + (base.pw ? '\\left(' + base.s + '\\right)' : base.s) + base.trail + '}';
+          s = it.t === 'pow' ? bs + '^{' + ex + '}' : bs + '\\times10^{' + ex + '}';
+        } else {
+          s = it.t === 'pow' ? BASE_MISSING_TEX + '^{' + ex + '}' : '\\times10^{' + ex + '}';
+        }
+        add('operand', s, true);
+      } else if (isNode(it)) {
+        add('operand', texNode(it, cur), !!PW_TYPES[it.t], it.t === 'frac');
+      }
+    }
+    while (stack.length > 1) closeFrame(false);
+    return joinTex(stack[0].parts);
+  }
+  function renderTex(key, opts) {
+    if (key && typeof key === 'object') { opts = key; key = undefined; }
+    opts = opts || {};
+    var e = ed(key);
+    var cur = opts.cursor === false ? null : e.cur;
+    if (e.root.length === 0) return cur ? CUR_TEX : '';
+    return texBlock(e.root, cur);
+  }
+
+  /* ---------------- editing ---------------- */
+  function insertItem(e, item) { e.cur.block.splice(e.cur.idx, 0, item); e.cur.idx++; }
+  function insertNode(e, node, enterSlot) {
+    e.cur.block.splice(e.cur.idx, 0, node);
+    if (enterSlot === null) { e.cur.idx++; return; }
+    e.cur.block = node.s[enterSlot];
+    e.cur.idx = 0;
+  }
+
+  function doAppend(e, v) {
+    if (typeof v !== 'string') return false;
+    if (/^[0-9.]$/.test(v)) { insertItem(e, { t: 'd', v: v }); return true; }
+    if (has(OP_TEX, v)) { insertItem(e, { t: 'op', v: v }); return true; }
+    if (has(VARS, v)) { insertItem(e, { t: 'var', v: v }); return true; }
+    if (v === 'e' || v === 'pi') { insertItem(e, { t: 'const', id: v }); return true; }
+    if (v.indexOf('const:') === 0) {
+      var id = v.slice(6);
+      if (!constInfo(id)) return false;
+      insertItem(e, { t: 'const', id: id });
+      return true;
+    }
+    if (v === 'Ans') { insertItem(e, { t: 'ans' }); return true; }
+    if (v === '(') { insertItem(e, { t: 'open', fn: '' }); return true; }
+    if (has(FN_INPUT, v)) { insertItem(e, { t: 'open', fn: FN_INPUT[v] }); return true; }
+    if (has(NODE_INPUT, v)) { insertNode(e, makeNode(NODE_INPUT[v]), 0); return true; }
+    if (v === '^{}') { insertNode(e, makeNode('pow'), 0); return true; }
+    if (v === '*10^{}') { insertNode(e, makeNode('sci'), 0); return true; }
+    if (v === '^{2}') {
+      var sq = makeNode('pow');
+      sq.s[0].push({ t: 'd', v: '2' });
+      insertNode(e, sq, null);
+      return true;
+    }
+    if (v === ',') return commaMove(e);
+    if (v === ')') return closeParen(e);
+    return false;
+  }
+  // ',' : move to the next slot of the nearest multi-slot ancestor (or after it from its last slot)
+  function commaMove(e) {
+    var b = e.cur.block;
+    for (;;) {
+      var p = findParent(e.root, b);
+      if (!p) return false;
+      if (p.node.s.length > 1) {
+        if (p.slot < p.node.s.length - 1) {
+          var nb = p.node.s[p.slot + 1];
+          e.cur.block = nb;
+          e.cur.idx = nb.length;
+        } else {
+          e.cur.block = p.parentBlock;
+          e.cur.idx = p.nodeIdx + 1;
+        }
+        return true;
+      }
+      b = p.parentBlock;
+    }
+  }
+  function closeParen(e) {
+    var b = e.cur.block, i = e.cur.idx;
+    if (pendingOpenIdx(b, i) !== -1) { insertItem(e, { t: 'close' }); return true; }
+    if (i < b.length && b[i].t === 'close') { e.cur.idx = i + 1; return true; }
+    var p = findParent(e.root, b);
+    if (p) { e.cur.block = p.parentBlock; e.cur.idx = p.nodeIdx + 1; return true; }
+    return false;
+  }
+
+  function doDelete(e) {
+    var b = e.cur.block, i = e.cur.idx;
+    if (i > 0) {
+      var it = b[i - 1];
+      if (isNode(it)) {
+        if (allSlotsEmpty(it)) { b.splice(i - 1, 1); e.cur.idx = i - 1; return true; }
+        for (var k = it.s.length - 1; k >= 0; k--) {
+          if (it.s[k].length) { e.cur.block = it.s[k]; e.cur.idx = it.s[k].length; return true; }
+        }
+        return false;
+      }
+      if (it.t === 'open') {
+        var m = matchCloseIdx(b, i - 1);
+        if (m !== -1) b.splice(m, 1);
+      }
+      b.splice(i - 1, 1);
+      e.cur.idx = i - 1;
+      return true;
+    }
+    var p = findParent(e.root, b);
+    if (!p) return false;
+    var node = p.node, pb = p.parentBlock;
+    if (p.slot > 0) {
+      if (allSlotsEmpty(node)) { pb.splice(p.nodeIdx, 1); e.cur.block = pb; e.cur.idx = p.nodeIdx; return true; }
+      var prev = node.s[p.slot - 1];
+      e.cur.block = prev;
+      e.cur.idx = prev.length;
+      return true;
+    }
+    var othersEmpty = node.s.slice(1).every(blockEmpty);
+    if (othersEmpty) {
+      var content = node.s[0].slice();
+      for (var n = unclosedCount(content); n > 0; n--) content.push({ t: 'close' });
+      pb.splice.apply(pb, [p.nodeIdx, 1].concat(content));
+    }
+    e.cur.block = pb;
+    e.cur.idx = p.nodeIdx;
+    return true;
+  }
+
+  function doMove(e, dir) {
+    var b = e.cur.block, i = e.cur.idx, p, it;
+    if (dir > 0) {
+      if (i < b.length) {
+        it = b[i];
+        if (isNode(it)) { e.cur.block = it.s[0]; e.cur.idx = 0; }
+        else e.cur.idx = i + 1;
+        return true;
+      }
+      p = findParent(e.root, b);
+      if (!p) return false;
+      if (p.slot < p.node.s.length - 1) { e.cur.block = p.node.s[p.slot + 1]; e.cur.idx = 0; }
+      else { e.cur.block = p.parentBlock; e.cur.idx = p.nodeIdx + 1; }
+      return true;
+    }
+    if (i > 0) {
+      it = b[i - 1];
+      if (isNode(it)) { var ls = it.s[it.s.length - 1]; e.cur.block = ls; e.cur.idx = ls.length; }
+      else e.cur.idx = i - 1;
+      return true;
+    }
+    p = findParent(e.root, b);
+    if (!p) return false;
+    if (p.slot > 0) { var ps = p.node.s[p.slot - 1]; e.cur.block = ps; e.cur.idx = ps.length; }
+    else { e.cur.block = p.parentBlock; e.cur.idx = p.nodeIdx; }
+    return true;
+  }
+
+  /* ---------------- public API ---------------- */
+  function append(v) { var k = activeEditorKey(); var r = doAppend(editors[k], v); notify(k); return r; }
+  function deleteLast() { var k = activeEditorKey(); var r = doDelete(editors[k]); notify(k); return r; }
+  function moveCursor(dir) {
+    var d = dir === 'right' ? 1 : dir === 'left' ? -1 : Number(dir);
+    var k = activeEditorKey();
+    var r = (d === 1 || d === -1) ? doMove(editors[k], d) : false;
+    notify(k);
+    return r;
+  }
+  function clearAll() {
+    var k = activeEditorKey(), e = editors[k];
+    e.root.length = 0;
+    e.cur.block = e.root;
+    e.cur.idx = 0;
+    notify(k);
+    return true;
+  }
+  function cursorToEnd(key) { var e = ed(key); e.cur.block = e.root; e.cur.idx = e.root.length; return true; }
+  function isEmpty(key) { return ed(key).root.length === 0; }
+  function serialize(key) { return serBlock(ed(key).root); }
+  function keyToInput(key) {
+    if (typeof key !== 'string') return null;
+    if (key === '^') return '^{}';
+    if (/^[abcxyze0-9.+\-*\/(),]$/.test(key)) return key;
+    return null;
+  }
+  function cursorPath(e) {
+    var chain = [];
+    var b = e.cur.block;
+    for (;;) {
+      var p = findParent(e.root, b);
+      if (!p) break;
+      chain.unshift(p.node.t + '@' + p.nodeIdx + '.s' + p.slot);
+      b = p.parentBlock;
+    }
+    return ['root'].concat(chain).join('>') + ':' + e.cur.idx;
+  }
+  function __dbg(key) {
+    var k = key || activeEditorKey();
+    var e = ed(k);
+    return { key: k, ser: serialize(k), tex: renderTex(k), cur: cursorPath(e), empty: e.root.length === 0 };
+  }
+
+  return {
+    // public editor API
+    append: append, deleteLast: deleteLast, moveCursor: moveCursor, clearAll: clearAll,
+    renderTex: renderTex, serialize: serialize, isEmpty: isEmpty, cursorToEnd: cursorToEnd,
+    keyToInput: keyToInput, configure: configure, setKey: setKey,
+    editors: editors, activeEditorKey: activeEditorKey, ed: ed, __dbg: __dbg,
+    // internals (exported for tests and later steps)
+    EMPTY_MARK: EMPTY_MARK, CUR_TEX: CUR_TEX, SQ_TEX: SQ_TEX, SQ_CUR_TEX: SQ_CUR_TEX,
+    NODE_SLOTS: NODE_SLOTS, makeNode: makeNode, isNode: isNode, newEditor: newEditor,
+    matchCloseIdx: matchCloseIdx, pendingOpenIdx: pendingOpenIdx, findParent: findParent,
+    blockEmpty: blockEmpty, allSlotsEmpty: allSlotsEmpty, takeBase: takeBase,
+    serBlock: serBlock, serSlot: serSlot, serNode: serNode, joinParts: joinParts,
+    serializeRoot: serializeRoot, texBlock: texBlock, texSlot: texSlot, texNode: texNode,
+    joinTex: joinTex
+  };
+});
+</script>
+<script>
+    math.import({
+    lg: function (x) {
+        return math.log10(x);
+    }
+});
+let state = { mode: 'main', expr: { main:'', fx:'', gx:'', vars:'' }, rootTarget:'f', funcTarget:'f', fitTarget:'data', matrixTarget:'calc' };
+let currentExpression = '';
+let cursorPos = 0;
+let lastAnswerVal = 0;
+let lastAnswerStr = '0';
+let config = { xMin:-10, xMax:10, yMin:-6, yMax:6 };
+let isTraceMode = false;
+
+// 拟合数据系统
+let fitData = [{x: '', y: '', freq: '1'}, {x: '', y: '', freq: '1'}, {x: '', y: '', freq: '1'}];
+let fitConfig = { xMin:-10, xMax:10, yMin:-6, yMax:6 };
+let fitResult = { k: 0, b: 0, r: 0, valid: false, data: [] };
+let isLogFit = false;
+
+const matrixNames = ['A', 'B', 'C', 'D'];
+const matrixData = {
+    A: { rows: 1, cols: 1, values: [[0]] },
+    B: { rows: 1, cols: 1, values: [[0]] },
+    C: { rows: 1, cols: 1, values: [[0]] },
+    D: { rows: 1, cols: 1, values: [[0]] }
+};
+let activeMatrix = 'A';
+let matrixCalcExpr = '';
+let matrixCalcCursor = 0;
+let matrixLastAnswer = null;
+let matrixPreviousAnswer = 0;
+
+const VAR_KEYS   = ['a','b','c','x','y','z'];
+const VAR_LABELS = { a:'a', b:'b', c:'c', x:'x', y:'y', z:'z'};
+const varExprs   = { a:'', b:'', c:'', x:'', y:'', z:''};
+const varVals    = { a:0,  b:0,  c:0,  x:0,  y:0,  z:0};
+let activeVar    = 'a';
+
+const singleDisplay = document.getElementById('single-line-display');
+const doubleDisplay  = document.getElementById('double-line-display');
+const resVal         = document.getElementById('calc-res-val');
+const canvas         = document.getElementById('plotCanvas');
+const ctx            = canvas.getContext('2d');
+const fitCanvas      = document.getElementById('fitCanvas');
+const fitCtx         = fitCanvas.getContext('2d');
+
+function evalWithLocalX(code, scope, xVal) {
+    if (scope instanceof Map) {
+        const ls = new Map(scope); ls.set('x', xVal);
+        return code.evaluate(ls);
+    } else if (scope && typeof scope.set === 'function') {
+        const has = scope.has('x'), old = scope.get('x');
+        scope.set('x', xVal); const r = code.evaluate(scope);
+        if (has) scope.set('x', old); else scope.delete('x');
+        return r;
+    } else {
+        const ls = Object.assign({}, scope, { x: xVal });
+        return code.evaluate(ls);
+    }
+}
+
+function customInt(args, mathObj, scope) {
+    const lower = args[1].compile().evaluate(scope), upper = args[2].compile().evaluate(scope);
+    if (typeof lower !== 'number' || typeof upper !== 'number') return NaN;
+    const code = args[0].compile();
+    const n = 1000, h = (upper - lower) / n;
+    let sum = evalWithLocalX(code, scope, lower) + evalWithLocalX(code, scope, upper);
+    for (let i = 1; i < n; i++) sum += evalWithLocalX(code, scope, lower + i * h) * (i % 2 === 0 ? 2 : 4);
+    return sum * h / 3;
+}
+customInt.rawArgs = true;
+
+function customDeriv(args, mathObj, scope) {
+    const val = args[1].compile().evaluate(scope);
+    if (typeof val !== 'number') return NaN;
+    const code = args[0].compile();
+    let result;
+    try {
+        if (scope instanceof Map) {
+            const ls = new Map(scope); ls.set('x', val);
+            result = mathObj.derivative(args[0], 'x').evaluate(ls);
+        } else if (scope && typeof scope.set === 'function') {
+            const has = scope.has('x'), old = scope.get('x');
+            scope.set('x', val); result = mathObj.derivative(args[0], 'x').evaluate(scope);
+            if (has) scope.set('x', old); else scope.delete('x');
+        } else {
+            const ls = Object.assign({}, scope, { x: val });
+            result = mathObj.derivative(args[0], 'x').evaluate(ls);
+        }
+    } catch(e) {
+        const h = 1e-7;
+        const v1 = evalWithLocalX(code, scope, val + h), v2 = evalWithLocalX(code, scope, val - h);
+        result = (v1 - v2) / (2 * h);
+    }
+    return result;
+}
+customDeriv.rawArgs = true;
+math.import({
+    int: customInt,
+    deriv: customDeriv,
+    frac: function(a, b) { return a / b; }
+}, { override: true });
+
+(function initVarsPanel() {
+    VAR_KEYS.forEach(k => { katex.render(VAR_LABELS[k], document.getElementById('vname-' + k), { throwOnError:false }); });
+    katex.render('s_x', document.getElementById('stats-label-sx'), { throwOnError:false });
+    katex.render('\\sigma_x', document.getElementById('stats-label-sigma-x'), { throwOnError:false });
+    katex.render('s_y', document.getElementById('stats-label-sy'), { throwOnError:false });
+    katex.render('\\sigma_y', document.getElementById('stats-label-sigma-y'), { throwOnError:false });
+    renderFitRows();
+    initMatrixControls();
+    katex.render('x^n', document.getElementById('matrix-power-btn'), { throwOnError:false });
+})();
+
+// ===== 结构化公式编辑器接入 (EditorCore, 树模型) =====
+// 每个可见元素是一个不可分割的项: 插入一次, 删除一次. 表达式字符串只是树的序列化结果.
+EditorCore.configure({
+    getKey: function () {
+        if (state.mode === 'funcs') return state.funcTarget === 'f' ? 'fx' : 'gx';
+        if (state.mode === 'vars') return 'var_' + activeVar;
+        return 'main';
+    },
+    onChange: function (k, ser) {
+        currentExpression = ser; cursorPos = ser.length;
+        if (k === 'main' || k === 'fx' || k === 'gx') state.expr[k] = ser;
+        // 变量编辑器只在 = 计算成功后写回 varExprs (见 calculate)
+    }
+});
+function getEvalString(s) { return s || ''; }
+function moveCursor(d) { EditorCore.moveCursor(d); renderLatex(); }
+window.__dbg = function () { return EditorCore.__dbg(); };
+
+function updateVarsPanel() {
+    VAR_KEYS.forEach(k => {
+        document.getElementById('var-row-' + k).classList.toggle('active', k === activeVar);
+        const el = document.getElementById('vval-' + k);
+        if (k === 'x' && varExprs.x === '') { el.innerText = '未定义'; el.style.color = '#bbb'; }
+        else {
+            const val = varVals[k];
+            el.innerText = (typeof val === 'number') ? math.format(val, { precision:8 }) : String(val);
+            el.style.color = '#555';
+        }
+    });
+}
+
+function selectVar(k) {
+    activeVar = k;
+    EditorCore.cursorToEnd('var_' + k);
+    currentExpression = EditorCore.serialize('var_' + k); cursorPos = currentExpression.length;
+    updateVarsPanel(); renderLatex();
+    if (k === 'x' && varExprs.x === '') resVal.innerText = 'x 未定义';
+    else resVal.innerText = '= ' + parseFloat(varVals[k].toFixed(8)).toString();
+}
+
+function getCombinedScope() {
+    const scope = new Map(Object.entries({
+        a: varVals.a, b: varVals.b, c: varVals.c, y: varVals.y, z: varVals.z, Ans: lastAnswerVal
+    }));
+    if (varExprs.x !== '') scope.set('x', varVals.x);
+    try { if (state.expr.fx) math.evaluate(`f(x) = ${getEvalString(state.expr.fx)}`, scope); } catch(e) {}
+    try { if (state.expr.gx) math.evaluate(`g(x) = ${getEvalString(state.expr.gx)}`, scope); } catch(e) {}
+    return scope;
+}
+
+// 公式框 TeX 由编辑器树直接生成 (参数保留以兼容旧调用, 不再使用)
+function getDisplayTex(expr, mode) {
+    let tex = EditorCore.renderTex(EditorCore.activeEditorKey(), { cursor: true });
+    if (state.mode === 'funcs') tex = (state.funcTarget === 'f' ? 'f(x) = ' : 'g(x) = ') + tex;
+    if (state.mode === 'vars') tex = VAR_LABELS[activeVar] + ' = ' + tex;
+    return tex;
+}
+function renderLatex() {
+    try {
+        let tex = getDisplayTex(currentExpression, state.mode);
+        // 注意这里将 throwOnError 改为 true，主动暴露渲染错误
+        katex.render(tex, singleDisplay, { displayMode:true, throwOnError:true, trust:true });
+    } catch (e) {
+        // 捕获错误并输出平滑的中文提示
+        singleDisplay.innerHTML = `<div style="color:var(--btn-danger); font-size:16px; font-weight:800; display:flex; justify-content:center; align-items:center; padding-top:15px; font-family: sans-serif;">表达式过于复杂，请简化</div>`;
+    }
+}
+
+function updatePlotScreen() {
+    const renderNoPrefix = (id, label, key) => {
+        const el = document.getElementById(id);
+        try {
+            const tex = EditorCore.isEmpty(key) ? '\\cdots' : EditorCore.renderTex(key, { cursor: false });
+            katex.render(label + ' = ' + tex, el, { throwOnError:true, trust:true });
+        } catch (e) {
+            el.innerHTML = '<span style="color:var(--btn-danger); font-size:14px; font-weight:bold; font-family: sans-serif;">' + label + ' 过于复杂</span>';
+        }
+    };
+    renderNoPrefix('line-fx', 'f(x)', 'fx');
+    renderNoPrefix('line-gx', 'g(x)', 'gx');
+}
+
+function append(v) { EditorCore.append(v); renderLatex(); }
+
+function deleteLast() { EditorCore.deleteLast(); renderLatex(); }
+
+function clearAll() {
+    EditorCore.clearAll(); renderLatex();
+    if (state.mode === 'main') resVal.innerText = '0';
+    if (state.mode === 'vars') {
+        if (activeVar === 'x' && varExprs.x === '') resVal.innerText = 'x 未定义';
+        else resVal.innerText = '= ' + parseFloat(varVals[activeVar].toFixed(8));
+    }
+    if (state.mode === 'funcs') resVal.innerText = '编辑中...';
+}
+
+function xUndefinedErr(e) { const msg = e.message || ''; return /undefined symbol\s+x\b/i.test(msg) || /\bx\b.*undefined/i.test(msg); }
+
+// 遵循 "语法错误 > 数学错误 > 变量未定义" 优先级的计算引擎
+// 空槽序列化为 \u0000, math.parse 必然报语法错误
+function calculate() {
+    const key = EditorCore.activeEditorKey();
+    const ser = EditorCore.serialize(key);
+    if (state.mode === 'funcs') {
+        try { math.parse(ser); state.expr[key] = ser; resVal.innerText = '已保存'; }
+        catch (e) { resVal.innerText = '语法错误'; }
+        return;
+    }
+    if (ser.trim() === '') { resVal.innerText = '0'; return; }
+    try {
+        math.parse(ser);
+        const res = math.evaluate(ser, getCombinedScope());
+        const num = typeof res === 'number' ? res : parseFloat(math.format(res));
+        if (!isFinite(num)) { resVal.innerText = '数学错误'; return; }
+        lastAnswerVal = num; lastAnswerStr = math.format(res, { precision:10 });
+        if (state.mode === 'vars') {
+            varVals[activeVar] = num; varExprs[activeVar] = ser;
+            updateVarsPanel();
+        }
+        resVal.innerText = '= ' + lastAnswerStr;
+    } catch (e) {
+        const msg = e.message || '';
+        if (/SyntaxError|Unexpected|parse error/i.test(e.name + msg)) resVal.innerText = '语法错误';
+        else if (xUndefinedErr(e)) resVal.innerText = '错误: x 未定义';
+        else resVal.innerText = '数学错误';
+    }
+}
+
+// ─────────────────────────────────────────────────────────
+// 对数回归拟合系统
+// ─────────────────────────────────────────────────────────
+
+function renderFitRows() {
+    const container = document.getElementById('fit-rows');
+    container.innerHTML = '';
+    fitData.forEach((row, idx) => {
+        const div = document.createElement('div');
+        div.style.cssText = 'display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:8px;';
+        // 关键：判断是否为空，为空则传空字符串
+        const xVal = (row.x === '' || row.x === null) ? '' : row.x;
+        const yVal = (row.y === '' || row.y === null) ? '' : row.y;
+        const freqVal = (row.freq === '' || row.freq === null || row.freq === undefined) ? '1' : row.freq;
+        div.innerHTML = `
+            <input type="text" inputmode="decimal" value="${xVal}" placeholder="" class="fit-input-cell" oninput="updateFitData(${idx}, 'x', this.value)" onchange="updateFitData(${idx}, 'x', this.value)">
+            <input type="text" inputmode="decimal" value="${yVal}" placeholder="" class="fit-input-cell" oninput="updateFitData(${idx}, 'y', this.value)" onchange="updateFitData(${idx}, 'y', this.value)">
+            <input type="text" inputmode="decimal" value="${freqVal}" placeholder="1" class="fit-input-cell" oninput="updateFitData(${idx}, 'freq', this.value)" onchange="updateFitData(${idx}, 'freq', this.value)">
+        `;
+        container.appendChild(div);
+    });
+}
+
+function updateFitData(idx, key, val) {
+    // 允许存储为字符串，计算时再转换
+    fitData[idx][key] = val.trim();
+    updateFitCalculation();
+}
+
+function addFitRow() {
+    fitData.push({x: '', y: '', freq: '1'});
+    renderFitRows();
+    // 滚动到底部
+    const rows = document.getElementById('fit-rows');
+    rows.scrollTop = rows.scrollHeight;
+    updateFitCalculation(); // 更新状态
+}
+function removeFitRow() { if (fitData.length > 2) { fitData.pop(); renderFitRows(); updateFitCalculation(); } }
+
+function toggleLogFit() {
+    isLogFit = !isLogFit;
+    const btn = document.getElementById('btn-log-fit');
+    if (isLogFit) {
+        btn.style.background = "var(--btn-primary)";
+        btn.style.color = "#fff";
+        btn.innerText = "取消 Log₁₀"; // 可选：改变文字提醒
+    } else {
+        btn.style.background = "";
+        btn.style.color = "";
+        btn.innerText = "取 Log₁₀";
+    }
+    updateFitCalculation(); // 此函数现在会处理坐标轴标签的切换
+}
+
+function formatStatValue(value) {
+    return Number.isFinite(value) ? parseFloat(value.toFixed(8)).toString() : '---';
+}
+
+function weightedStats(values) {
+    if (!values.length) return { mean: NaN, variance: NaN, std: NaN, max: NaN, min: NaN, median: NaN };
+    const total = values.reduce((sum, item) => sum + item.w, 0);
+    if (!(total > 0)) return { mean: NaN, variance: NaN, std: NaN, max: NaN, min: NaN, median: NaN };
+    const mean = values.reduce((sum, item) => sum + item.value * item.w, 0) / total;
+    const variance = values.reduce((sum, item) => sum + item.w * Math.pow(item.value - mean, 2), 0) / total;
+    const sorted = values.slice().sort((a, b) => a.value - b.value);
+    let acc = 0, median = sorted[sorted.length - 1].value;
+    for (let i = 0; i < sorted.length; i++) {
+        const item = sorted[i];
+        acc += item.w;
+        if (acc > total / 2) { median = item.value; break; }
+        if (acc === total / 2) {
+            median = i + 1 < sorted.length ? (item.value + sorted[i + 1].value) / 2 : item.value;
+            break;
+        }
+    }
+    return { mean, variance, std: Math.sqrt(variance), max: sorted[sorted.length - 1].value, min: sorted[0].value, median };
+}
+
+function updateVariableStats() {
+    const xs = [], ys = [];
+    fitData.forEach(p => {
+        const x = parseFloat(p.x), y = parseFloat(p.y);
+        let w = p.freq === '' || p.freq === null || p.freq === undefined ? 1 : parseFloat(p.freq);
+        if (!isFinite(w) || w < 0) w = 1;
+        if (isFinite(x) && isFinite(y) && w > 0) {
+            xs.push({ value: x, w });
+            ys.push({ value: y, w });
+        }
+    });
+    const xStats = weightedStats(xs), yStats = weightedStats(ys);
+    const fields = ['mean', 'variance', 'std', 'max', 'min', 'median'];
+    fields.forEach(name => {
+        document.getElementById('stats-x-' + name).innerText = formatStatValue(xStats[name]);
+        document.getElementById('stats-y-' + name).innerText = formatStatValue(yStats[name]);
+    });
+}
+
+function updateFitCalculation() {
+    updateVariableStats();
+    let validPoints = [];
+    fitData.forEach(p => {
+        let vx = parseFloat(p.x);
+        let vy = parseFloat(p.y);
+        let weight = p.freq === '' || p.freq === null || p.freq === undefined ? 1 : parseFloat(p.freq);
+        if (!isFinite(weight) || weight < 0) weight = 1;
+        // 只有 X 和 Y 都有数值时才记录
+        if (!isNaN(vx) && !isNaN(vy) && weight > 0) {
+            let x = vx, y = vy;
+            if (isLogFit) {
+                // Log 模式下，非正数无法计算，直接跳过该点
+                if (x > 0 && y > 0) {
+                    x = Math.log10(x);
+                    y = Math.log10(y);
+                    validPoints.push({x, y, w: weight});
+                }
+            } else {
+                validPoints.push({x, y, w: weight});
+            }
+        }
+    });
+
+    fitResult.data = validPoints; // 用于绘制散点
+
+    const eqDiv = document.getElementById('fit-eq-display');
+    const rValSpan = document.getElementById('fit-r-val-display');
+    const axisX = document.getElementById('fit-axis-x');
+    const axisY = document.getElementById('fit-axis-y');
+
+    // 切换坐标轴标签文本
+    if (axisX && axisY) {
+        axisX.innerText = isLogFit ? "lg x" : "x";
+        axisY.innerText = isLogFit ? "lg y" : "y";
+    }
+
+    // --- 异常情况处理 ---
+    // 1. 数据不足 2 组
+    if (validPoints.length < 2) {
+        fitResult.valid = false;
+        eqDiv.innerText = "---";
+        rValSpan.innerText = "---";
+        drawFitGraph();
+        return;
+    }
+
+    let n = validPoints.reduce((sum, p) => sum + p.w, 0);
+    let sX=0, sY=0, sXY=0, sX2=0, sY2=0;
+    validPoints.forEach(p => {
+        sX+=p.w*p.x; sY+=p.w*p.y; sXY+=p.w*p.x*p.y; sX2+=p.w*p.x*p.x; sY2+=p.w*p.y*p.y;
+    });
+
+    let den = n * sX2 - sX * sX;
+    let rDen = Math.sqrt((n * sX2 - sX * sX) * (n * sY2 - sY * sY));
+
+    // 2. 无法计算斜率（例如所有 X 坐标相同）或相关系数
+    if (Math.abs(den) < 1e-15 || rDen === 0) {
+        fitResult.valid = false;
+        eqDiv.innerText = "---";
+        rValSpan.innerText = "---";
+        drawFitGraph();
+        return;
+    }
+
+    // --- 正常计算过程 ---
+    fitResult.k = (n * sXY - sX * sY) / den;
+    fitResult.b = (sY - fitResult.k * sX) / n;
+    fitResult.r = (n * sXY - sX * sY) / rDen;
+    fitResult.valid = true;
+
+    // 渲染公式
+    let kStr = parseFloat(fitResult.k.toFixed(4));
+    let bStr = parseFloat(fitResult.b.toFixed(4));
+    let latex = isLogFit ? `\\lg y = ${kStr}\\lg x` : `y = ${kStr}x`;
+    if (bStr > 0) latex += ` + ${bStr}`;
+    else if (bStr < 0) latex += ` - ${Math.abs(bStr)}`;
+    katex.render(latex, eqDiv, { throwOnError: false });
+
+    // 渲染 r 值精度
+    let r = fitResult.r;
+    let absR = Math.abs(r);
+    if (absR > 0.9 && absR < 1) {
+        let decimals = absR.toString().split('.')[1] || "";
+        let nineCount = 0;
+        while(decimals[nineCount] === '9') nineCount++;
+        rValSpan.innerText = r.toFixed(nineCount + 2);
+    } else {
+        rValSpan.innerText = r.toFixed(4);
+    }
+
+    drawFitGraph();
+}
+function setFitTarget(t) {
+    state.fitTarget = t;
+    document.getElementById('fit-target-data').classList.toggle('active', t==='data');
+    document.getElementById('fit-target-graph').classList.toggle('active', t==='graph');
+    document.getElementById('fit-target-stats').classList.toggle('active', t==='stats');
+    document.getElementById('fit-data-panel').style.display = (t === 'data') ? 'flex' : 'none';
+    document.getElementById('fit-graph-panel').style.display = (t === 'graph') ? 'flex' : 'none';
+    document.getElementById('fit-stats-panel').style.display = (t === 'stats') ? 'flex' : 'none';
+    if (t === 'graph') { updateFitCalculation(); setTimeout(() => { initFitCanvas(); drawFitGraph(); }, 50); }
+    if (t === 'stats') updateVariableStats();
+}
+
+function initMatrixControls() {
+    ['matrix-rows', 'matrix-cols'].forEach(id => {
+        const select = document.getElementById(id);
+        select.innerHTML = '';
+        for (let i = 1; i <= 4; i++) {
+            const option = document.createElement('option');
+            option.value = String(i); option.textContent = String(i);
+            select.appendChild(option);
+        }
+    });
+    renderMatrixDefinition();
+    renderMatrixCalculation();
+}
+
+function selectMatrix(name) {
+    activeMatrix = name;
+    matrixNames.forEach(key => document.getElementById('matrix-def-' + key).classList.toggle('active', key === name));
+    renderMatrixDefinition();
+}
+
+function renderMatrixButtons() {
+    matrixNames.forEach(name => {
+        const m = matrixData[name];
+        katex.render(`${name}_{${m.rows}\\times${m.cols}}`, document.getElementById('matrix-def-' + name), { throwOnError:false });
+    });
+}
+
+function renderMatrixDefinition() {
+    const m = matrixData[activeMatrix];
+    document.getElementById('matrix-def-title').innerText = '矩阵' + activeMatrix;
+    document.getElementById('matrix-rows').value = String(m.rows);
+    document.getElementById('matrix-cols').value = String(m.cols);
+    const grid = document.getElementById('matrix-grid');
+    grid.style.gridTemplateColumns = `repeat(${m.cols}, 76px)`;
+    grid.innerHTML = '';
+    for (let r = 0; r < m.rows; r++) for (let c = 0; c < m.cols; c++) {
+        const input = document.createElement('input');
+        input.type = 'text'; input.inputMode = 'decimal'; input.className = 'matrix-cell';
+        input.value = String(m.values[r][c] ?? 0);
+        input.setAttribute('aria-label', `${activeMatrix}[${r + 1},${c + 1}]`);
+        input.addEventListener('input', () => updateMatrixCell(r, c, input.value));
+        grid.appendChild(input);
+    }
+    renderMatrixButtons();
+}
+
+function resizeMatrix() {
+    const m = matrixData[activeMatrix];
+    const rows = parseInt(document.getElementById('matrix-rows').value, 10);
+    const cols = parseInt(document.getElementById('matrix-cols').value, 10);
+    m.values = Array.from({length: rows}, (_, r) => Array.from({length: cols}, (_, c) => m.values[r]?.[c] ?? 0));
+    m.rows = rows; m.cols = cols;
+    renderMatrixDefinition();
+}
+
+function updateMatrixCell(row, col, value) {
+    const n = value.trim() === '' ? 0 : Number(value);
+    matrixData[activeMatrix].values[row][col] = Number.isFinite(n) ? n : 0;
+    matrixLastAnswer = null;
+}
+
+function cloneMatrix(m) { return {rows:m.rows, cols:m.cols, values:m.values.map(row => row.slice())}; }
+function isMatrixValue(v) { return v && Number.isInteger(v.rows) && Number.isInteger(v.cols) && Array.isArray(v.values); }
+function matrixError(message) { throw new Error(message); }
+function matrixAdd(a,b,sign=1) { if(!isMatrixValue(a)||!isMatrixValue(b)||a.rows!==b.rows||a.cols!==b.cols) matrixError('矩阵维数不匹配'); return {rows:a.rows,cols:a.cols,values:a.values.map((row,r)=>row.map((v,c)=>v+sign*b.values[r][c]))}; }
+function matrixMultiply(a,b) {
+    if(isMatrixValue(a)&&isMatrixValue(b)){ if(a.cols!==b.rows) matrixError('矩阵维数不匹配'); const values=Array.from({length:a.rows},()=>Array(b.cols).fill(0)); for(let i=0;i<a.rows;i++) for(let k=0;k<a.cols;k++) for(let j=0;j<b.cols;j++) values[i][j]+=a.values[i][k]*b.values[k][j]; return {rows:a.rows,cols:b.cols,values}; }
+    if(isMatrixValue(a)&&typeof b==='number') return {rows:a.rows,cols:a.cols,values:a.values.map(row=>row.map(v=>v*b))};
+    if(typeof a==='number'&&isMatrixValue(b)) return {rows:b.rows,cols:b.cols,values:b.values.map(row=>row.map(v=>a*v))};
+    return a*b;
+}
+function matrixDet(m) { if(!isMatrixValue(m)||m.rows!==m.cols) matrixError('行列式要求方阵'); const a=m.values.map(row=>row.slice()); let det=1; for(let i=0;i<m.rows;i++){let p=i;for(let r=i+1;r<m.rows;r++)if(Math.abs(a[r][i])>Math.abs(a[p][i]))p=r;if(Math.abs(a[p][i])<1e-12)return 0;if(p!==i){[a[i],a[p]]=[a[p],a[i]];det=-det;}const pivot=a[i][i];det*=pivot;for(let r=i+1;r<m.rows;r++){const f=a[r][i]/pivot;for(let c=i+1;c<m.cols;c++)a[r][c]-=f*a[i][c];}}return Math.abs(det)<1e-12?0:det; }
+function matrixInverse(m) { if(!isMatrixValue(m)||m.rows!==m.cols) matrixError('求逆要求方阵'); const n=m.rows,a=m.values.map((row,r)=>row.slice().concat(Array.from({length:n},(_,c)=>r===c?1:0))); for(let i=0;i<n;i++){let p=i;for(let r=i+1;r<n;r++)if(Math.abs(a[r][i])>Math.abs(a[p][i]))p=r;if(Math.abs(a[p][i])<1e-12)matrixError('矩阵奇异，无法求逆');[a[i],a[p]]=[a[p],a[i]];const q=a[i][i];for(let c=0;c<2*n;c++)a[i][c]/=q;for(let r=0;r<n;r++)if(r!==i){const f=a[r][i];for(let c=0;c<2*n;c++)a[r][c]-=f*a[i][c];}}return {rows:n,cols:n,values:a.map(row=>row.slice(n))}; }
+function matrixPower(m,e) { if(!isMatrixValue(m)||m.rows!==m.cols) matrixError('矩阵幂要求方阵'); if(!Number.isInteger(e)||e<=0) matrixError('矩阵幂指数必须是正整数'); let out={rows:m.rows,cols:m.cols,values:Array.from({length:m.rows},(_,r)=>Array.from({length:m.cols},(_,c)=>r===c?1:0))},base=cloneMatrix(m); while(e>0){if(e%2)out=matrixMultiply(out,base);base=matrixMultiply(base,base);e=Math.floor(e/2);} return out; }
+function transposeMatrix(m) { if(!isMatrixValue(m)) matrixError('转置要求矩阵'); return {rows:m.cols,cols:m.rows,values:Array.from({length:m.cols},(_,c)=>Array.from({length:m.rows},(_,r)=>m.values[r][c]))}; }
+function tokenizeMatrixExpr(expr) {
+    const tokens=[]; let i=0;
+    while(i<expr.length){
+        if(/\s/.test(expr[i])){i++;continue;}
+        const rest=expr.slice(i);
+        const word=rest.match(/^(transpose|inv|det|tr|Ans|[ABCD]|T)/);
+        if(word){tokens.push(word[1]);i+=word[1].length;continue;}
+        const num=rest.match(/^(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?/);
+        if(num){tokens.push(num[0]);i+=num[0].length;continue;}
+        const op=rest.match(/^[(){}+\-*/^□]/);
+        if(op){tokens.push(op[0]);i++;continue;}
+        matrixError('矩阵算式含有无法识别的字符');
+    }
+    return tokens;
+}
+function parseMatrixExpr(expr) {
+    expr=String(expr||'').replace(/\\(?:cdot|times)/g,'*');
+    const raw=tokenizeMatrixExpr(expr), t=[];
+    const isEnd=x => /^\d|^[ABCD]$|^Ans$|^T$|^[\)}]$/.test(x);
+    const isStart=x => /^\d|^[ABCD]$|^Ans$|^\($|^(transpose|inv|det|tr)$/.test(x);
+    for(let i=0;i<raw.length;i++){ const prev=raw[i-1], cur=raw[i]; if(prev && ((isEnd(prev)&&isStart(cur)) || (prev===')'&&isStart(cur)))) t.push('*'); t.push(cur); }
+    let pos=0; const peek=()=>t[pos], take=()=>t[pos++];
+    const applyFunction=(name,v)=>{ if(!isMatrixValue(v)) matrixError(name+'要求矩阵'); if(name==='inv') return matrixInverse(v); if(name==='transpose') return transposeMatrix(v); if(name==='det') return matrixDet(v); if(name==='tr'){if(v.rows!==v.cols)matrixError('求迹要求方阵'); return v.values.reduce((s,row,i)=>s+row[i],0);} };
+    function primary(){ const x=take(); if(x==='('){const v=addSub(); if(take()!==')')matrixError('括号不匹配'); return v;} if(matrixNames.includes(x))return cloneMatrix(matrixData[x]); if(x==='Ans'){return isMatrixValue(matrixPreviousAnswer)?cloneMatrix(matrixPreviousAnswer):Number(matrixPreviousAnswer)||0;} if(x && /^(?:\d|\.)/.test(x))return Number(x); matrixError('矩阵算式不完整'); }
+    function unary(){ const x=peek(); if(x==='+'||x==='-'){take(); const v=unary(); if(typeof v!=='number') matrixError('矩阵不支持一元负号'); return x==='-'?-v:v;} if(x==='inv'||x==='transpose'||x==='det'||x==='tr'){take(); if(take()!=='(')matrixError('函数括号不匹配'); const v=addSub(); if(peek()===')') take(); else if(x==='det'||x==='tr') matrixError('函数括号不匹配'); return applyFunction(x,v);} return primary(); }
+    function power(){
+        let v=unary();
+        if(peek()==='^'){
+            take();
+            const wrapped=peek()==='{'; if(wrapped)take();
+            if(peek()==='T'){take();v=transposeMatrix(v);}
+            else if(peek()==='-'){
+                take();
+                if (isMatrixValue(v)) {
+                    if (take()!=='1') matrixError('仅支持矩阵的逆写法');
+                    v=matrixInverse(v);
+                } else {
+                    const expToken=take();
+                    if(!expToken || !/^(?:\d|\.)/.test(expToken)) matrixError('幂指数必须是数字');
+                    const e=-Number(expToken);
+                    v=Math.pow(v,e);
+                }
+            }
+            else {
+                let e;
+                if(wrapped){
+                    const sign=peek()==='-' ? (take(),-1) : 1, expToken=take();
+                    if(!expToken || expToken==='□')matrixError('幂指数必须是数字');
+                    if(!/^(?:\d|\.)/.test(expToken))matrixError('幂指数必须是数字');
+                    e=sign*Number(expToken);
+                } else e=unary();
+                if(typeof e!=='number')matrixError('幂指数必须是数字'); v=isMatrixValue(v)?matrixPower(v,e):Math.pow(v,e);
+            }
+            if(wrapped && take()!=='}')matrixError('幂指数括号不匹配');
+        }
+        return v;
+    }
+    function mul(){ let v=power(); while(peek()==='*'||peek()==='/'){const op=take(),b=power(); if(op==='*')v=matrixMultiply(v,b); else {if(typeof b!=='number')matrixError('不支持除以矩阵'); if(b===0)matrixError('除数不能为零'); v=isMatrixValue(v)?matrixMultiply(v,1/b):v/b;} } return v; }
+    function addSub(){ let v=mul(); while(peek()==='+'||peek()==='-'){const op=take(),b=mul(); if(isMatrixValue(v)||isMatrixValue(b))v=matrixAdd(v,b,op==='+'?1:-1); else v=op==='+'?v+b:v-b;} return v; }
+    const result=addSub(); if(pos!==t.length)matrixError('矩阵算式不完整'); return result;
+}
+function formatMatrixNumber(n) { if(!Number.isFinite(n)) return 'NaN'; const a=Math.abs(n); if((a!==0&&a<1e-6)||a>=1e9) return n.toExponential(8).replace(/\.?(\d*?)0+e/,'$1e'); return parseFloat(n.toFixed(8)).toString(); }
+function formatMatrixTexNumber(n) { return formatMatrixNumber(n); }
+function matrixMatchingParen(s, open) { let depth=0; for(let i=open;i<s.length;i++){ if(s[i]==='(')depth++; else if(s[i]===')'&&!--depth)return i; } return -1; }
+function matrixMatchingBrace(s, open) { let depth=0; for(let i=open;i<s.length;i++){ if(s[i]==='{')depth++; else if(s[i]==='}'&&!--depth)return i; } return -1; }
+function renderMatrixTex(source, cursor) {
+    const marked=source.slice(0,cursor)+'\u0000'+source.slice(cursor);
+    function segment(s) {
+        let out='';
+        const prevAtomEnd = idx => {
+            let j=idx-1; while(j>=0 && (s[j]==='\u0000'||s[j]==='\u0001')) j--;
+            return j>=0 && /[0-9A-D)]/.test(s[j]);
+        };
+        const startsAtom = idx => {
+            const tail=s.slice(idx);
+            return /^[0-9A-D(]/.test(tail) || /^(?:Ans|transpose\(|inv\(|det\(|tr\()/.test(tail);
+        };
+        const dot = idx => {
+            if (!prevAtomEnd(idx) || !startsAtom(idx) || s[idx] === '^') return false;
+            let j=idx-1; while(j>=0 && (s[j]==='\u0000'||s[j]==='\u0001')) j--;
+            return !(/[0-9.]/.test(s[idx]) && /[0-9.]/.test(s[j] || ''));
+        };
+        for(let i=0;i<s.length;i++) {
+            if(s[i]==='\u0000'){out+='\\htmlClass{cursor-blink}{|}';continue;}
+            if(s[i]==='\u0001'){out+=')';continue;}
+            const fn=s.slice(i).match(/^(transpose|inv|det|tr)\(/);
+            if(fn){
+                if(dot(i)) out+='\\cdot ';
+                const name=fn[1], open=i+fn[0].length-1, end=matrixMatchingParen(s,open);
+                if(end<0){ out += name==='transpose'||name==='inv' ? '\\left('+segment(s.slice(open+1))+'\\right)'+(name==='transpose'?'^T':'^{-1}') : '\\operatorname{'+name+'}\\left('+segment(s.slice(open+1))+'\\right.'; break; }
+                const inner=segment(s.slice(open+1,end));
+                out += name==='transpose' ? '\\left('+inner+'\\right)^T' : name==='inv' ? '\\left('+inner+'\\right)^{-1}' : '\\operatorname{'+name+'}\\left('+inner+'\\right)';
+                i=end; continue;
+            }
+            if(s[i]==='^' && s[i+1]==='\u0000') {
+                out += '^{\\htmlClass{cursor-blink}{|}}';
+                i += 1;
+                continue;
+            }
+            if(s[i]==='^' && s[i+1]==='{') {
+                const end=matrixMatchingBrace(s,i+1);
+                if (s[i+2]==='\u0000') {
+                    const content=end<0?'':s.slice(i+3,end);
+                    out += '^{\\htmlClass{cursor-blink}{|}' + (content?segment(content):'') + '}';
+                    if(end<0) { i=s.length; break; }
+                    i=end; continue;
+                }
+            }
+            if(s.startsWith('^{',i)) {
+                if (dot(i)) out+='\\cdot ';
+                const end=matrixMatchingBrace(s,i+1);
+                const content=end<0?s.slice(i+2):s.slice(i+2,end);
+                let baseEnd=i-1; while(baseEnd>=0&&(s[baseEnd]==='\u0000'||s[baseEnd]==='\u0001'))baseEnd--;
+                if(baseEnd<0 || /[+\-*/(,]/.test(s[baseEnd])) out+='\\square ';
+                out+='^{'+(content?segment(content):'\\square')+'}';
+                if(end<0) { out+=''; break; }
+                i=end; continue;
+            }
+            if(s[i]==='('){
+                if(dot(i)) out+='\\cdot ';
+                const end=matrixMatchingParen(s,i);
+                if(end<0){ out+='\\left('+segment(s.slice(i+1))+'\\right.'; break; }
+                out+='\\left('+segment(s.slice(i+1,end))+'\\right)'; i=end;
+            } else if(s[i]===')')out+='\\right)'; else if(s[i]==='*')out+='\\cdot '; else if(s[i]==='/')out+='/'; else if(s[i]==='^')out+='^'; else if(s[i]==='T')out+='T'; else if(s[i]==='□')out+='\\square '; else if(s[i]==='A'&&s.slice(i).startsWith('Ans')){if(dot(i))out+='\\cdot ';out+='\\mathrm{Ans}';i+=2;} else { if(dot(i)) out+='\\cdot '; out+=s[i]; }
+        }
+        return out;
+    }
+    return segment(marked);
+}
+function renderMatrixCalculation() {
+    const display=document.getElementById('matrix-calc-display'), answer=document.getElementById('matrix-answer');
+    const tex = renderMatrixTex(matrixCalcExpr, matrixCalcCursor);
+    katex.render(matrixCalcExpr ? tex : '\\,',display,{throwOnError:false,trust:true});
+    if(matrixLastAnswer===null){answer.innerText='---';return;}
+    if(isMatrixValue(matrixLastAnswer)){const body=matrixLastAnswer.values.map(row=>row.map(formatMatrixTexNumber).join(' & ')).join(' \\\\ ');katex.render(`\\begin{bmatrix}${body}\\end{bmatrix}`,answer,{throwOnError:false});}
+    else katex.render(formatMatrixTexNumber(matrixLastAnswer),answer,{throwOnError:false});
+}
+function matrixTokenNeedsMultiply(token) {
+    if (matrixCalcCursor <= 0) return false;
+    const left = matrixCalcExpr.slice(0, matrixCalcCursor);
+    const prev = left[left.length - 1];
+    const leftAtom = /[0-9A-D)]/.test(prev) || left.endsWith('Ans');
+    const rightAtom = token === '(' || token === 'Ans' || /^[ABCD]$/.test(token) || /^(?:inv|det|tr|transpose)\(/.test(token);
+    return leftAtom && rightAtom;
+}
+function appendMatrixToken(token) {
+    let text = token, offset = token.length;
+    if (token === ')' && matrixCalcExpr[matrixCalcCursor] === ')' && /(?:^|)(transpose|inv)\([^()]*$/.test(matrixCalcExpr.slice(0, matrixCalcCursor))) {
+        matrixCalcExpr=matrixCalcExpr.slice(0,matrixCalcCursor)+'\u0001'+matrixCalcExpr.slice(matrixCalcCursor);
+        matrixCalcCursor += 1; matrixLastAnswer=null; renderMatrixCalculation(); return;
+    }
+    if (token === '^') { text='^{□}'; offset=2; }
+    if (token === '*10^{}') { text='*10^{□}'; offset=5; }
+    if (matrixTokenNeedsMultiply(token)) { text='*'+text; offset+=1; }
+    if (matrixCalcExpr[matrixCalcCursor] === '□') matrixCalcExpr=matrixCalcExpr.slice(0,matrixCalcCursor)+text+matrixCalcExpr.slice(matrixCalcCursor+1);
+    else matrixCalcExpr=matrixCalcExpr.slice(0,matrixCalcCursor)+text+matrixCalcExpr.slice(matrixCalcCursor);
+    matrixCalcCursor+=offset; matrixLastAnswer=null; renderMatrixCalculation();
+}
+function appendMatrixFunction(name) {
+    const autoClose = name === 'transpose' || name === 'inv';
+    const raw=autoClose ? name+'()' : name+'('; const text=matrixTokenNeedsMultiply(raw)?'*'+raw:raw;
+    matrixCalcExpr=matrixCalcExpr.slice(0,matrixCalcCursor)+text+matrixCalcExpr.slice(matrixCalcCursor);
+    matrixCalcCursor += (text.startsWith('*') ? 1 : 0) + name.length + 1;
+    matrixLastAnswer=null; renderMatrixCalculation();
+}
+function appendMatrixTranspose() { appendMatrixFunction('transpose'); }
+function moveMatrixCursor(dir) {
+    if (dir > 0 && matrixCalcExpr[matrixCalcCursor] === ')') {
+        let depth = 0;
+        for (let i = matrixCalcCursor; i >= 0; i--) {
+            if (matrixCalcExpr[i] === ')') depth++;
+            else if (matrixCalcExpr[i] === '(') {
+                if (depth > 0) {
+                    depth--;
+                    if (depth === 0) {
+                        const m = matrixCalcExpr.slice(0, i).match(/(transpose|inv)\s*$/);
+                        if (m) { matrixCalcCursor += 1; renderMatrixCalculation(); return; }
+                    }
+                    continue;
+                }
+                break;
+            }
+        }
+    }
+    matrixCalcCursor=Math.max(0,Math.min(matrixCalcExpr.length,matrixCalcCursor+dir));
+    const atomicTokens=['transpose(','inv(','det(','tr(','Ans','*10^{'];
+    let moved=true;
+    while(moved){
+        moved=false;
+        for(const token of atomicTokens){
+            for(let i=1;i<token.length;i++){
+                if(matrixCalcExpr.slice(0,matrixCalcCursor).endsWith(token.slice(0,i)) && matrixCalcExpr.slice(matrixCalcCursor).startsWith(token.slice(i))){
+                    matrixCalcCursor += dir<0 ? -i : token.length-i; moved=true; break;
+                }
+            }
+            if(moved) break;
+        }
+    }
+    matrixCalcCursor=Math.max(0,Math.min(matrixCalcExpr.length,matrixCalcCursor)); renderMatrixCalculation();
+}
+function deleteMatrixLast() {
+    if(matrixCalcCursor<=0)return;
+    let left=matrixCalcExpr.slice(0,matrixCalcCursor), right=matrixCalcExpr.slice(matrixCalcCursor);
+    if (left.endsWith('}')) { matrixCalcCursor -= 1; renderMatrixCalculation(); return; }
+    const match=left.match(/(inv|det|tr|transpose)\($/);
+    if(match){ matrixCalcExpr=left.slice(0,-match[0].length)+right.replace(/^\)/,''); matrixCalcCursor-=match[0].length; }
+    else if(left.endsWith('Ans')){ matrixCalcExpr=left.slice(0,-3)+right; matrixCalcCursor-=3; }
+    else if(left.endsWith('^{')) {
+        left=left.slice(0,-2);
+        let depth=1, close=-1;
+        for(let i=0;i<right.length;i++){ if(right[i]==='{')depth++; else if(right[i]==='}')depth--; if(depth===0){close=i;break;} }
+        if(close>=0) right=right.slice(close+1);
+        else if(right.startsWith('□')) right=right.slice(1);
+        matrixCalcExpr=left+right; matrixCalcCursor=left.length;
+    }
+    else { matrixCalcExpr=left.slice(0,-1)+right; matrixCalcCursor--; }
+    matrixLastAnswer=null; renderMatrixCalculation();
+}
+function clearMatrixCalc() { matrixCalcExpr='';matrixCalcCursor=0;matrixLastAnswer=null;renderMatrixCalculation(); }
+function calculateMatrix() { try{const result=parseMatrixExpr(matrixCalcExpr);matrixPreviousAnswer=isMatrixValue(result)?cloneMatrix(result):result;matrixLastAnswer=result;renderMatrixCalculation();}catch(e){matrixLastAnswer=null;document.getElementById('matrix-answer').innerText=e.message||'矩阵计算错误';} }
+
+function setFuncTarget(t) {
+    state.funcTarget = t;
+    document.getElementById('func-target-f').classList.toggle('active', t==='f');
+    document.getElementById('func-target-g').classList.toggle('active', t==='g');
+    if (state.mode === 'funcs') { const k = t === 'f' ? 'fx' : 'gx'; EditorCore.cursorToEnd(k); currentExpression = EditorCore.serialize(k); cursorPos = currentExpression.length; renderLatex(); resVal.innerText = '编辑中...'; }
+}
+
+function setMatrixTarget(target) {
+    state.matrixTarget = target;
+    document.getElementById('matrix-target-calc').classList.toggle('active', target === 'calc');
+    document.getElementById('matrix-target-def').classList.toggle('active', target === 'def');
+    document.getElementById('matrix-calc-area').style.display = target === 'calc' ? 'flex' : 'none';
+    document.getElementById('matrix-def-area').style.display = target === 'def' ? 'flex' : 'none';
+    if (target === 'def') renderMatrixDefinition(); else renderMatrixCalculation();
+}
+
+function switchMode(m) {
+
+    document.querySelectorAll('.top-nav .nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('nav-' + m).classList.add('active');
+    state.mode = m;
+    if (constPanelOpen) setConstPanel(false);
+
+    if (m === 'main' || m === 'funcs' || m === 'vars') { const k = EditorCore.activeEditorKey(); EditorCore.cursorToEnd(k); currentExpression = EditorCore.serialize(k); }
+    else currentExpression = state.expr[m] || '';
+    cursorPos = currentExpression.length;
+
+    const isVars = m === 'vars', isPlot = m === 'plot', isRoots = m === 'roots', isFuncs = m === 'funcs', isFit = m === 'fit', isMatrix = m === 'matrix', isMain = m === 'main';
+
+    document.getElementById('funcs-subnav').style.display   = isFuncs ? 'grid' : 'none';
+    document.getElementById('fit-subnav').style.display     = isFit ? 'grid' : 'none';
+    document.getElementById('matrix-subnav').style.display  = isMatrix ? 'grid' : 'none';
+    document.getElementById('main-screen').style.display    = (isRoots || isFit || isMatrix) ? 'none'  : 'flex';
+    document.getElementById('keyboard-area').style.display  = (isPlot || isRoots || isFit || isMatrix) ? 'none' : 'grid';
+    document.getElementById('var-btns-row').style.display   = (isPlot || isRoots || isFit || isMatrix) ? 'none' : 'grid';
+    document.getElementById('graph-area').style.display     = isPlot  ? 'flex'  : 'none';
+    document.getElementById('roots-panel').style.display    = isRoots ? 'flex'  : 'none';
+    document.getElementById('vars-panel').style.display     = isVars  ? 'grid'  : 'none';
+    document.getElementById('fit-data-panel').style.display = (isFit && state.fitTarget === 'data') ? 'flex' : 'none';
+    document.getElementById('fit-graph-panel').style.display = (isFit && state.fitTarget === 'graph') ? 'flex' : 'none';
+    document.getElementById('fit-stats-panel').style.display = (isFit && state.fitTarget === 'stats') ? 'flex' : 'none';
+    document.getElementById('matrix-panel').style.display = isMatrix ? 'flex' : 'none';
+    document.getElementById('matrix-calc-area').style.display = (isMatrix && state.matrixTarget === 'calc') ? 'flex' : 'none';
+    document.getElementById('matrix-def-area').style.display = (isMatrix && state.matrixTarget === 'def') ? 'flex' : 'none';
+
+    if (isPlot) {
+        singleDisplay.style.display = 'none'; doubleDisplay.style.display = 'flex'; resVal.style.display = 'none';
+        updatePlotScreen(); setTimeout(() => { initCanvas(); drawGraph(); }, 50);
+    } else if (isFit) {
+        if (state.fitTarget === 'graph') { updateFitCalculation(); setTimeout(() => { initFitCanvas(); drawFitGraph(); }, 50); }
+        else if (state.fitTarget === 'stats') updateVariableStats();
+    } else if (isMatrix) {
+        if (state.matrixTarget === 'def') renderMatrixDefinition(); else renderMatrixCalculation();
+    } else if (!isRoots) {
+        singleDisplay.style.display = 'block'; doubleDisplay.style.display = 'none'; resVal.style.display = 'block';
+        if (isMain) resVal.innerText = '= ' + lastAnswerStr;
+        else if (isVars) {
+            if (activeVar === 'x' && varExprs.x === '') resVal.innerText = 'x 未定义';
+            else resVal.innerText = '= ' + parseFloat(varVals[activeVar].toFixed(8));
+            updateVarsPanel();
+        }
+        else if (isFuncs) resVal.innerText = '编辑中...';
+        renderLatex();
+    }
+}
+
+// ─────────────────────────────────────────────────────────
+// 求根、绘图逻辑底层保留 (与前版高度一致)
+// ─────────────────────────────────────────────────────────
+function setRootTarget(t) { state.rootTarget = t; document.getElementById('root-target-f').classList.toggle('active', t==='f'); document.getElementById('root-target-g').classList.toggle('active', t==='g'); }
+function brent(f, a, b, tol = 1e-12) {
+    let fa = f(a), fb = f(b); if (isNaN(fa) || isNaN(fb) || fa * fb > 0) return null;
+    if (Math.abs(fa) < tol) return a; if (Math.abs(fb) < tol) return b;
+    let c = a, fc = fa, d = b - a, e = d; const EPS = 2.22e-16;
+    for (let iter = 0; iter < 120; iter++) {
+        if (fb * fc > 0) { c = a; fc = fa; d = e = b - a; }
+        if (Math.abs(fc) < Math.abs(fb)) { a = b; b = c; c = a; fa = fb; fb = fc; fc = fa; }
+        const tol1 = 2 * EPS * Math.abs(b) + tol * 0.5, xm = (c - b) * 0.5;
+        if (Math.abs(xm) <= tol1 || Math.abs(fb) < tol) return b;
+        if (Math.abs(e) >= tol1 && Math.abs(fa) > Math.abs(fb)) {
+            let s = fb / fa, p, q, r;
+            if (a === c) { p = 2 * xm * s; q = 1 - s; }
+            else { q = fa / fc; r = fb / fc; p = s * (2 * xm * q * (q - r) - (b - a) * (r - 1)); q = (q - 1) * (r - 1) * (s - 1); }
+            if (p > 0) q = -q; else p = -p;
+            if (2 * p < Math.min(3 * xm * q - Math.abs(tol1 * q), Math.abs(e * q))) { e = d; d = p / q; } else { d = xm; e = d; }
+        } else { d = xm; e = d; }
+        a = b; fa = fb; b += Math.abs(d) > tol1 ? d : (xm > 0 ? tol1 : -tol1); fb = f(b);
+        if (isNaN(fb)) return null;
+    } return b;
+}
+function safeFnWrap(rawFn) {
+    return function(x) {
+        try {
+            const v = rawFn(x);
+            if (typeof v === 'number') return (isNaN(v) || !isFinite(v)) ? NaN : v;
+            if (v && typeof v === 'object' && 're' in v) { if (Math.abs(v.im) > 1e-12) return NaN; return v.re; }
+            return NaN;
+        } catch(e) { return NaN; }
+    };
+}
+function calculateRoots() {
+    const x1 = parseFloat(document.getElementById('rootX1').value), x2 = parseFloat(document.getElementById('rootX2').value);
+    const exp = state.expr[state.rootTarget === 'f' ? 'fx' : 'gx'];
+    const listEl = document.getElementById('root-list'); listEl.innerHTML = '';
+    if (!exp) { listEl.innerText = '函数未定义'; return; }
+    if (x1 >= x2) { listEl.innerText = 'Start 必须小于 End'; return; }
+    try {
+        const scope = getCombinedScope(), compiled = math.compile(getEvalString(exp));
+        const rawFn = v => evalWithLocalX(compiled, scope, v);
+        const fn = safeFnWrap(rawFn);
+        const dFn = x => { const h = 1e-6; const f1 = fn(x + h), f2 = fn(x - h); if(isNaN(f1) || isNaN(f2)) return NaN; return (f1 - f2) / (2 * h); };
+        const STEPS = 8000, h = (x2 - x1) / STEPS, candidates = [];
+        let prevX = x1, prevF = fn(x1), prevDF = dFn(x1);
+        for (let i = 1; i <= STEPS; i++) {
+            const curX = x1 + i * h, curF = fn(curX), curDF = dFn(curX);
+            if (!isNaN(prevF) && !isNaN(curF)) {
+                if (prevF * curF < 0) { const r = brent(fn, prevX, curX); if (r !== null) candidates.push(r); }
+                else if (prevF === 0) candidates.push(prevX);
+            }
+            if (!isNaN(prevDF) && !isNaN(curDF)) {
+                if (prevDF * curDF < 0) { const r = brent(dFn, prevX, curX); if (r !== null && Math.abs(fn(r)) < 1e-6) candidates.push(r); }
+            }
+            prevX = curX; prevF = curF; prevDF = curDF;
+        }
+        let finalRoots = candidates.filter(r => !isNaN(r) && r >= x1 - 1e-5 && r <= x2 + 1e-5).map(r => Math.abs(r) < 1e-10 ? 0 : r).filter(r => Math.abs(fn(r)) < 1e-6).sort((a, b) => a - b);
+        const clustered = [];
+        for (let i = 0; i < finalRoots.length; i++) {
+            if (clustered.length === 0) clustered.push(finalRoots[i]);
+            else { const last = clustered[clustered.length - 1]; if (Math.abs(finalRoots[i] - last) > 1e-4) clustered.push(finalRoots[i]); else if (Math.abs(fn(finalRoots[i])) < Math.abs(fn(last))) clustered[clustered.length - 1] = finalRoots[i]; }
+        }
+        if (!clustered.length) listEl.innerText = '未发现实根';
+        else clustered.forEach((r, idx) => { const div = document.createElement('div'); div.className = 'root-katex-item'; listEl.appendChild(div); katex.render(`x_{${idx + 1}} = ${parseFloat(r.toFixed(8))}`, div); });
+    } catch(e) { listEl.innerText = xUndefinedErr(e) ? '计算出错: x 未定义' : '计算出错: ' + e.message; }
+}
+
+function toggleTrace() { isTraceMode = !isTraceMode; const btn = document.getElementById('btn-trace'); if (isTraceMode) { btn.classList.add('active'); btn.innerText = '关闭追踪'; } else { btn.classList.remove('active'); btn.innerText = '开启追踪'; drawGraph(); } }
+function initCanvas() { const wrap=document.getElementById('canvas-wrap'), dpr=window.devicePixelRatio||1; canvas.width=wrap.clientWidth*dpr; canvas.height=wrap.clientHeight*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); }
+function makeMappers() { const dpr=window.devicePixelRatio||1, w=canvas.width/dpr, h=canvas.height/dpr; return { w, h, mX: x=>((x-config.xMin)/(config.xMax-config.xMin))*w, mY: y=>h-((y-config.yMin)/(config.yMax-config.yMin))*h, invX: px=>config.xMin+(px/w)*(config.xMax-config.xMin), invY: py=>config.yMin+((h-py)/h)*(config.yMax-config.yMin) }; }
+function drawGraph() {
+    const {w,h,mX,mY}=makeMappers(); ctx.clearRect(0,0,w,h);
+    ctx.strokeStyle='#f0f0f0';ctx.lineWidth=1;ctx.beginPath(); for(let x=Math.floor(config.xMin);x<=config.xMax;x++){ctx.moveTo(mX(x),0);ctx.lineTo(mX(x),h);} for(let y=Math.floor(config.yMin);y<=config.yMax;y++){ctx.moveTo(0,mY(y));ctx.lineTo(w,mY(y));} ctx.stroke();
+    ctx.strokeStyle='#ccc';ctx.lineWidth=1.5;ctx.beginPath(); ctx.moveTo(0,mY(0));ctx.lineTo(w,mY(0)); ctx.moveTo(mX(0),0);ctx.lineTo(mX(0),h); ctx.stroke();
+    const scope = getCombinedScope();
+    [['fx','#0984e3'],['gx','#e17055']].forEach(([key,color])=>{
+        if(!state.expr[key])return;
+        try{ const compiled=math.compile(getEvalString(state.expr[key])); ctx.beginPath();ctx.strokeStyle=color;ctx.lineWidth=2.5; let first=true; for(let i=0;i<=w;i+=1.5){ const x = config.xMin+(i/w)*(config.xMax-config.xMin), y = evalWithLocalX(compiled, scope, x); if(typeof y==='number'&&isFinite(y)){ const py=mY(y); if(first){ctx.moveTo(i,py);first=false;}else{ctx.lineTo(i,py);} }else{first=true;} } ctx.stroke(); }catch(e){}
+    });
+}
+function drawTracker(px,py) {
+    drawGraph(); const {w,h,mX,mY,invX}=makeMappers(); const x=invX(px); ctx.save();
+    ctx.strokeStyle='rgba(80,80,80,0.3)';ctx.lineWidth=1; ctx.setLineDash([5,5]); ctx.beginPath();ctx.moveTo(px,0);ctx.lineTo(px,h);ctx.stroke(); ctx.setLineDash([]);
+    const scope = getCombinedScope(), hits=[];
+    [['fx','#0984e3','f'],['gx','#e17055','g']].forEach(([key,color,label])=>{
+        if(!state.expr[key])return;
+        try{ const compiled = math.compile(getEvalString(state.expr[key])); const y = evalWithLocalX(compiled, scope, x); if(typeof y!=='number'||!isFinite(y))return; const dotY=mY(y); ctx.beginPath();ctx.arc(px,dotY,6,0,Math.PI*2); ctx.fillStyle='white';ctx.fill(); ctx.beginPath();ctx.arc(px,dotY,4.5,0,Math.PI*2); ctx.fillStyle=color;ctx.fill(); hits.push({label,y,color}); }catch(e){}
+    });
+    if(!hits.length){ctx.restore();return;}
+    const xStr=parseFloat(x.toFixed(5)).toString(), lines=[{text:`x = ${xStr}`,color:'#444'}, ...hits.map(h=>({text:`${h.label}(x) = ${parseFloat(h.y.toFixed(5))}`,color:h.color}))];
+    const fSize=11.5,lineH=fSize+6,padX=10,padY=7,boxW=162, boxH=lines.length*lineH+padY*2;
+    let bx=px+16;if(bx+boxW>w-4)bx=px-boxW-16; let by=py-boxH/2;if(by<4)by=4;if(by+boxH>h-4)by=h-boxH-4; const r=7;
+    ctx.fillStyle='rgba(255,255,255,0.96)'; ctx.strokeStyle='rgba(0,0,0,0.11)';ctx.lineWidth=1; ctx.shadowColor='rgba(0,0,0,0.07)';ctx.shadowBlur=8; ctx.beginPath(); ctx.moveTo(bx+r,by);ctx.lineTo(bx+boxW-r,by); ctx.quadraticCurveTo(bx+boxW,by,bx+boxW,by+r); ctx.lineTo(bx+boxW,by+boxH-r); ctx.quadraticCurveTo(bx+boxW,by+boxH,bx+boxW-r,by+boxH); ctx.lineTo(bx+r,by+boxH); ctx.quadraticCurveTo(bx,by+boxH,bx,by+boxH-r); ctx.lineTo(bx,by+r); ctx.quadraticCurveTo(bx,by,bx+r,by); ctx.closePath();ctx.fill();ctx.stroke(); ctx.shadowBlur=0;
+    ctx.font=`${fSize}px 'Computer Modern Serif', 'CMU Serif', Georgia, serif`;ctx.textBaseline='middle';
+    lines.forEach((line,i)=>{ ctx.fillStyle=line.color; ctx.fillText(line.text,bx+padX,by+padY+lineH*i+lineH/2); }); ctx.restore();
+}
+
+function initFitCanvas() { const wrap=document.getElementById('fit-canvas-wrap'), dpr=window.devicePixelRatio||1; fitCanvas.width=wrap.clientWidth*dpr; fitCanvas.height=wrap.clientHeight*dpr; fitCtx.setTransform(dpr,0,0,dpr,0,0); }
+function makeFitMappers() { const dpr=window.devicePixelRatio||1, w=fitCanvas.width/dpr, h=fitCanvas.height/dpr; return { w, h, mX: x=>((x-fitConfig.xMin)/(fitConfig.xMax-fitConfig.xMin))*w, mY: y=>h-((y-fitConfig.yMin)/(fitConfig.yMax-fitConfig.yMin))*h }; }
+function drawFitGraph() {
+    const {w, h, mX, mY} = makeFitMappers();
+    fitCtx.clearRect(0, 0, w, h);
+
+    // 绘制背景网格和轴线 (保持原样)
+    fitCtx.strokeStyle = '#f0f0f0';
+    fitCtx.lineWidth = 1;
+    fitCtx.beginPath();
+    for (let x = Math.floor(fitConfig.xMin); x <= fitConfig.xMax; x++) { fitCtx.moveTo(mX(x), 0); fitCtx.lineTo(mX(x), h); }
+    for (let y = Math.floor(fitConfig.yMin); y <= fitConfig.yMax; y++) { fitCtx.moveTo(0, mY(y)); fitCtx.lineTo(w, mY(y)); }
+    fitCtx.stroke();
+
+    fitCtx.strokeStyle = '#ccc';
+    fitCtx.lineWidth = 1.5;
+    fitCtx.beginPath();
+    fitCtx.moveTo(0, mY(0)); fitCtx.lineTo(w, mY(0));
+    fitCtx.moveTo(mX(0), 0); fitCtx.lineTo(mX(0), h);
+    fitCtx.stroke();
+
+    if (fitResult.data && fitResult.data.length > 0) {
+        fitCtx.fillStyle = '#0984e3';
+        fitResult.data.forEach(p => {
+            fitCtx.beginPath();
+            fitCtx.arc(mX(p.x), mY(p.y), 4, 0, Math.PI*2);
+            fitCtx.fill();
+        });
+    }
+
+    // 3. 画拟合直线
+    if (fitResult.valid) {
+        fitCtx.strokeStyle = '#f56c6c';
+        fitCtx.lineWidth = 2;
+        fitCtx.beginPath();
+        let x1 = fitConfig.xMin;
+        let y1 = fitResult.k * x1 + fitResult.b;
+        let x2 = fitConfig.xMax;
+        let y2 = fitResult.k * x2 + fitResult.b;
+        fitCtx.moveTo(mX(x1), mY(y1));
+        fitCtx.lineTo(mX(x2), mY(y2));
+        fitCtx.stroke();
+    }
+}
+
+function canvasPixelCoords(canvasElem, clientX, clientY) { const rect = canvasElem.getBoundingClientRect(), dpr  = window.devicePixelRatio || 1, w = canvasElem.width / dpr, h = canvasElem.height / dpr; return { px: (clientX - rect.left) * (w / rect.width), py: (clientY - rect.top)  * (h / rect.height), w, h, rect }; }
+canvas.addEventListener('mousemove', e => { if (!isTraceMode) return; const { px, py } = canvasPixelCoords(canvas, e.clientX, e.clientY); drawTracker(px, py); });
+canvas.addEventListener('mousedown', e => { if (!isTraceMode) return; const { px, py } = canvasPixelCoords(canvas, e.clientX, e.clientY); drawTracker(px, py); });
+canvas.addEventListener('mouseleave', () => { drawGraph(); });
+canvas.addEventListener('wheel', e => { e.preventDefault(); if (isTraceMode) return; const factor = e.deltaY > 0 ? 1.12 : 0.9, dx = (config.xMax - config.xMin) * (factor - 1), dy = (config.yMax - config.yMin) * (factor - 1); config.xMin -= dx / 2; config.xMax += dx / 2; config.yMin -= dy / 2; config.yMax += dy / 2; syncRangeInputsFromConfig(); drawGraph(); }, { passive: false });
+
+let touch1 = null, touch2 = null; function getTouchById(list, id) { for (const t of list) if (t.identifier === id) return t; return null; }
+canvas.addEventListener('touchstart', e => { e.preventDefault(); if (isTraceMode) { const { px, py } = canvasPixelCoords(canvas, e.touches[0].clientX, e.touches[0].clientY); drawTracker(px, py); return; } if (e.touches.length === 1) { touch1 = { id: e.touches[0].identifier, x: e.touches[0].clientX, y: e.touches[0].clientY }; touch2 = null; } else if (e.touches.length >= 2) { touch1 = { id: e.touches[0].identifier, x: e.touches[0].clientX, y: e.touches[0].clientY }; touch2 = { id: e.touches[1].identifier, x: e.touches[1].clientX, y: e.touches[1].clientY }; } }, { passive: false });
+canvas.addEventListener('touchmove', e => { e.preventDefault(); if (isTraceMode) { const { px, py } = canvasPixelCoords(canvas, e.touches[0].clientX, e.touches[0].clientY); drawTracker(px, py); return; } const rect = canvas.getBoundingClientRect(); if (e.touches.length === 1 && touch1 && !touch2) { const t = getTouchById(e.touches, touch1.id) || e.touches[0], dx = (t.clientX - touch1.x) / rect.width * (config.xMax - config.xMin), dy = (t.clientY - touch1.y) / rect.height * (config.yMax - config.yMin); config.xMin -= dx; config.xMax -= dx; config.yMin += dy; config.yMax += dy; touch1 = { id: t.identifier, x: t.clientX, y: t.clientY }; syncRangeInputsFromConfig(); drawGraph(); } else if (e.touches.length >= 2 && touch1 && touch2) { const ta = getTouchById(e.touches, touch1.id) || e.touches[0], tb = getTouchById(e.touches, touch2.id) || e.touches[1], prevDx = Math.abs(touch1.x - touch2.x), prevDy = Math.abs(touch1.y - touch2.y), curDx  = Math.abs(ta.clientX - tb.clientX), curDy  = Math.abs(ta.clientY - tb.clientY), midClientX = (ta.clientX + tb.clientX) / 2, midClientY = (ta.clientY + tb.clientY) / 2, anchorRatioX = (midClientX - rect.left) / rect.width, anchorRatioY = (midClientY - rect.top) / rect.height, anchorMathX  = config.xMin + anchorRatioX * (config.xMax - config.xMin), anchorMathY  = config.yMax - anchorRatioY * (config.yMax - config.yMin); if (prevDx > 5 && curDx > 5) { const scaleX = prevDx / curDx, xRange = (config.xMax - config.xMin) * scaleX; config.xMin = anchorMathX - anchorRatioX * xRange; config.xMax = config.xMin + xRange; } if (prevDy > 5 && curDy > 5) { const scaleY = prevDy / curDy, yRange = (config.yMax - config.yMin) * scaleY; config.yMax = anchorMathY + anchorRatioY * yRange; config.yMin = config.yMax - yRange; } const prevMidX = (touch1.x + touch2.x) / 2, prevMidY = (touch1.y + touch2.y) / 2, panDx = (midClientX - prevMidX) / rect.width * (config.xMax - config.xMin), panDy = (midClientY - prevMidY) / rect.height * (config.yMax - config.yMin); config.xMin -= panDx; config.xMax -= panDx; config.yMin += panDy; config.yMax += panDy; touch1 = { id: ta.identifier, x: ta.clientX, y: ta.clientY }; touch2 = { id: tb.identifier, x: tb.clientX, y: tb.clientY }; syncRangeInputsFromConfig(); drawGraph(); } }, { passive: false });
+canvas.addEventListener('touchend', e => { e.preventDefault(); if (e.touches.length === 0) { touch1 = null; touch2 = null; } else if (e.touches.length === 1) { touch1 = { id: e.touches[0].identifier, x: e.touches[0].clientX, y: e.touches[0].clientY }; touch2 = null; } }, { passive: false }); canvas.addEventListener('touchcancel', () => { touch1 = null; touch2 = null; });
+
+let fitTouch1 = null, fitTouch2 = null;
+fitCanvas.addEventListener('wheel', e => { e.preventDefault(); const factor = e.deltaY > 0 ? 1.12 : 0.9, dx = (fitConfig.xMax - fitConfig.xMin) * (factor - 1), dy = (fitConfig.yMax - fitConfig.yMin) * (factor - 1); fitConfig.xMin -= dx / 2; fitConfig.xMax += dx / 2; fitConfig.yMin -= dy / 2; fitConfig.yMax += dy / 2; syncFitRangeInputsFromConfig(); drawFitGraph(); }, { passive: false });
+fitCanvas.addEventListener('touchstart', e => { e.preventDefault(); if (e.touches.length === 1) { fitTouch1 = { id: e.touches[0].identifier, x: e.touches[0].clientX, y: e.touches[0].clientY }; fitTouch2 = null; } else if (e.touches.length >= 2) { fitTouch1 = { id: e.touches[0].identifier, x: e.touches[0].clientX, y: e.touches[0].clientY }; fitTouch2 = { id: e.touches[1].identifier, x: e.touches[1].clientX, y: e.touches[1].clientY }; } }, { passive: false });
+fitCanvas.addEventListener('touchmove', e => { e.preventDefault(); const rect = fitCanvas.getBoundingClientRect(); if (e.touches.length === 1 && fitTouch1 && !fitTouch2) { const t = getTouchById(e.touches, fitTouch1.id) || e.touches[0], dx = (t.clientX - fitTouch1.x) / rect.width * (fitConfig.xMax - fitConfig.xMin), dy = (t.clientY - fitTouch1.y) / rect.height * (fitConfig.yMax - fitConfig.yMin); fitConfig.xMin -= dx; fitConfig.xMax -= dx; fitConfig.yMin += dy; fitConfig.yMax += dy; fitTouch1 = { id: t.identifier, x: t.clientX, y: t.clientY }; syncFitRangeInputsFromConfig(); drawFitGraph(); } else if (e.touches.length >= 2 && fitTouch1 && fitTouch2) { const ta = getTouchById(e.touches, fitTouch1.id) || e.touches[0], tb = getTouchById(e.touches, fitTouch2.id) || e.touches[1], prevDx = Math.abs(fitTouch1.x - fitTouch2.x), prevDy = Math.abs(fitTouch1.y - fitTouch2.y), curDx  = Math.abs(ta.clientX - tb.clientX), curDy  = Math.abs(ta.clientY - tb.clientY), midClientX = (ta.clientX + tb.clientX) / 2, midClientY = (ta.clientY + tb.clientY) / 2, anchorRatioX = (midClientX - rect.left) / rect.width, anchorRatioY = (midClientY - rect.top) / rect.height, anchorMathX  = fitConfig.xMin + anchorRatioX * (fitConfig.xMax - fitConfig.xMin), anchorMathY  = fitConfig.yMax - anchorRatioY * (fitConfig.yMax - fitConfig.yMin); if (prevDx > 5 && curDx > 5) { const scaleX = prevDx / curDx, xRange = (fitConfig.xMax - fitConfig.xMin) * scaleX; fitConfig.xMin = anchorMathX - anchorRatioX * xRange; fitConfig.xMax = fitConfig.xMin + xRange; } if (prevDy > 5 && curDy > 5) { const scaleY = prevDy / curDy, yRange = (fitConfig.yMax - fitConfig.yMin) * scaleY; fitConfig.yMax = anchorMathY + anchorRatioY * yRange; fitConfig.yMin = fitConfig.yMax - yRange; } const prevMidX = (fitTouch1.x + fitTouch2.x) / 2, prevMidY = (fitTouch1.y + fitTouch2.y) / 2, panDx = (midClientX - prevMidX) / rect.width * (fitConfig.xMax - fitConfig.xMin), panDy = (midClientY - prevMidY) / rect.height * (fitConfig.yMax - fitConfig.yMin); fitConfig.xMin -= panDx; fitConfig.xMax -= panDx; fitConfig.yMin += panDy; fitConfig.yMax += panDy; fitTouch1 = { id: ta.identifier, x: ta.clientX, y: ta.clientY }; fitTouch2 = { id: tb.identifier, x: tb.clientX, y: tb.clientY }; syncFitRangeInputsFromConfig(); drawFitGraph(); } }, { passive: false });
+fitCanvas.addEventListener('touchend', e => { e.preventDefault(); if (e.touches.length === 0) { fitTouch1 = null; fitTouch2 = null; } else if (e.touches.length === 1) { fitTouch1 = { id: e.touches[0].identifier, x: e.touches[0].clientX, y: e.touches[0].clientY }; fitTouch2 = null; } }, { passive: false }); fitCanvas.addEventListener('touchcancel', () => { fitTouch1 = null; fitTouch2 = null; });
+
+function syncRangeInputsFromConfig() { document.getElementById('xMin').value = +config.xMin.toFixed(3); document.getElementById('xMax').value = +config.xMax.toFixed(3); document.getElementById('yMin').value = +config.yMin.toFixed(3); document.getElementById('yMax').value = +config.yMax.toFixed(3); }
+function syncFromInput() { config.xMin = parseFloat(document.getElementById('xMin').value); config.xMax = parseFloat(document.getElementById('xMax').value); config.yMin = parseFloat(document.getElementById('yMin').value); config.yMax = parseFloat(document.getElementById('yMax').value); drawGraph(); }
+function syncFitRangeInputsFromConfig() { document.getElementById('fitXMin').value = +fitConfig.xMin.toFixed(3); document.getElementById('fitXMax').value = +fitConfig.xMax.toFixed(3); document.getElementById('fitYMin').value = +fitConfig.yMin.toFixed(3); document.getElementById('fitYMax').value = +fitConfig.yMax.toFixed(3); }
+function syncFitFromInput() { fitConfig.xMin = parseFloat(document.getElementById('fitXMin').value); fitConfig.xMax = parseFloat(document.getElementById('fitXMax').value); fitConfig.yMin = parseFloat(document.getElementById('fitYMin').value); fitConfig.yMax = parseFloat(document.getElementById('fitYMax').value); drawFitGraph(); }
+
+// 绑定实体键盘
+// ===== S4: 物理常数面板 =====
+// 短按 -> 在光标处插入原子常数; 长按 450ms -> cell 内显示科学记数法, 松手恢复且不插入;
+// 移动超过 8px 视为滚动, 不插入.
+let constPanelOpen = false, constPanelBuilt = false;
+const CONST_LONG_MS = 450, CONST_MOVE_PX = 8, CONST_SHOW_SIG = 10;
+function buildConstPanel() {
+    if (constPanelBuilt) return;
+    constPanelBuilt = true;
+    const list = document.getElementById('const-list');
+    CONST_GROUPS.forEach(g => {
+        const t = document.createElement('div');
+        t.className = 'const-group-title'; t.textContent = g.label;
+        list.appendChild(t);
+        g.items.forEach(c => {
+            const b = document.createElement('button');
+            b.type = 'button'; b.className = 'const-cell'; b.dataset.id = c.id;
+            const sym = document.createElement('span'); sym.className = 'c-sym';
+            const name = document.createElement('span'); name.className = 'c-name'; name.textContent = '：' + c.name;
+            const val = document.createElement('span'); val.className = 'c-val';
+            katex.render(c.tex, sym, { throwOnError:false });
+            const sp = constSciParts(c.id, CONST_SHOW_SIG);
+            katex.render(sp ? sp.tex : '?', val, { throwOnError:false });
+            b.title = c.name;
+            b.append(sym, name, val);
+            bindConstCell(b);
+            list.appendChild(b);
+        });
+    });
+}
+function bindConstCell(b) {
+    let timer = null, pid = null, x0 = 0, y0 = 0, longShown = false, moved = false;
+    const reset = () => { clearTimeout(timer); timer = null; pid = null; b.classList.remove('show-val'); };
+    b.addEventListener('pointerdown', e => {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        reset();
+        pid = e.pointerId; x0 = e.clientX; y0 = e.clientY; longShown = false; moved = false;
+        timer = setTimeout(() => { timer = null; longShown = true; b.classList.add('show-val'); }, CONST_LONG_MS);
+    });
+    b.addEventListener('pointermove', e => {
+        if (e.pointerId !== pid || moved) return;
+        if (Math.hypot(e.clientX - x0, e.clientY - y0) > CONST_MOVE_PX) {
+            moved = true;
+            if (!longShown) { clearTimeout(timer); timer = null; }
+        }
+    });
+    b.addEventListener('pointerup', e => {
+        if (e.pointerId !== pid) return;
+        const insert = !longShown && !moved;
+        reset();
+        if (insert) append('const:' + b.dataset.id);
+    });
+    b.addEventListener('pointercancel', reset);
+    b.addEventListener('pointerleave', e => { if (e.pointerId === pid) { moved = true; reset(); } });
+    b.addEventListener('contextmenu', e => e.preventDefault());
+    // 键盘激活 (detail === 0) 没有 pointer 事件, 单独处理
+    b.addEventListener('click', e => { if (e.detail === 0) append('const:' + b.dataset.id); });
+}
+function setConstPanel(open) {
+    constPanelOpen = open;
+    if (open) buildConstPanel();
+    document.getElementById('const-panel').style.display = open ? 'flex' : 'none';
+    document.getElementById('keyboard-area').style.display = open ? 'none' : 'grid';
+    document.getElementById('btn-const').classList.toggle('active', open);
+}
+function toggleConstPanel() { setConstPanel(!constPanelOpen); }
+
+document.addEventListener('keydown', function(e) {
+    if (document.activeElement.tagName === 'INPUT') return;
+    const key = e.key;
+    if (key === 'ArrowLeft') { e.preventDefault(); moveCursor(-1); }
+    if (key === 'ArrowRight') { e.preventDefault(); moveCursor(1); }
+    if (key === 'Backspace') { e.preventDefault(); deleteLast(); }
+    if (key === 'Escape') { e.preventDefault(); clearAll(); }
+    if (key === 'Enter' || key === '=') { e.preventDefault(); calculate(); }
+    const inp = EditorCore.keyToInput(key); if (inp) { e.preventDefault(); append(inp); }
+});
+
+</script>
+</body>
+</html>

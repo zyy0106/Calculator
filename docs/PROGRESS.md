@@ -12,7 +12,7 @@
 | S2 | 编辑器内核（纯模块 + 单测） | `C:\Users\28233\Documents\ChatGPT\WebCASIO\tools\editor-core.js`、`C:\Users\28233\Documents\ChatGPT\WebCASIO\tools\editor-core.test.js` | 否 | — | DONE |
 | S3 | 内核接入计算器 | 改 `C:\Users\28233\Documents\ChatGPT\WebCASIO\www\index.html` | 是 | S1+S2 | DONE |
 | S4 | 物理常数面板 UI | 改 `C:\Users\28233\Documents\ChatGPT\WebCASIO\www\index.html` | 是 | S3 | DONE |
-| S5 | 回归测试套件 + 交付 | `C:\Users\28233\Documents\ChatGPT\WebCASIO\tools\suite.js`、`C:\Users\28233\Documents\ChatGPT\WebCASIO\docs\输入测试报告.md`、同步 android 副本 | 是（仅修 bug） | S4 | TODO |
+| S5 | 回归测试套件 + 交付 | `C:\Users\28233\Documents\ChatGPT\WebCASIO\tools\suite.js`、`C:\Users\28233\Documents\ChatGPT\WebCASIO\docs\输入测试报告.md`、同步 android 副本 | 是（仅修 bug） | S4 | DONE |
 
 S3 / S4 / S5 改同一个文件，必须串行。S1 与 S2 互不相干，可并行。
 
@@ -65,12 +65,23 @@ S3 / S4 / S5 改同一个文件，必须串行。S1 与 S2 互不相干，可并
   2. 打开面板后整页可滚动到 1825px：KaTeX 的绝对定位 MathML 没有定位祖先；给 `.const-list` 和 `.const-cell` 加 `position:relative` 后页面高度恢复 860。
 - 验证（脚手架 `%TEMP%\webcasio-test\`）：`node C:\Users\28233\Documents\ChatGPT\WebCASIO\tools\s4check.js` → `S4CHECK OK`（布局/两列/无溢出/公式框高度不变 88→88、短按插入 c0、长按 qe 显示 1.602176634×10⁻¹⁹ 且不插入、拖动不插入、一次 DEL 删掉 ε₀、c0×2、qe×NA=96485.33212、mue×π、隐式乘 2ħ、plot/vars/main 切换关面板、变量 b=mₑ 后 b/mₑ=1、无 page error）。回归：`editor-core.test.js` 2223 通过、`probe.js` 8 条全对、`s3check.js` 无错误。截图 `%TEMP%\webcasio-test\s4-panel.png`、`s4-longpress.png`、`s4-end.png`。
 - 未验证：真机触摸（Android WebView）上的长按/滚动手感，只用无头 Edge 鼠标事件模拟过；`s4check.js` 在键盘隐藏时用 `press` 点隐藏按钮输入运算符，这只验证逻辑不验证 UI 可达性（面板内无运算符键，用户需「返回键盘」）。
+### S5（已完成）
+- 产出物：
+  - `C:\Users\28233\Documents\ChatGPT\WebCASIO\tools\suite.js`：无头 Edge 回归套件，153 项断言全绿。其中 132 条拟人键盘序列（中途含 `DEL` 与 `←`/`→`，均以 `=` 结束）、16 条物理常数面板用例、5 条 f/g/变量/plot/roots 模式用例。每步断言无「过于复杂」、光标恰 1 个、无 pageerror；最终结果用原生 `Math` 独立另算后以相对误差 1e-8 比对（常数期望取自 `constants-data.js`）。顺带写出 `tools\suite-report.json`（机器可读）。
+  - `C:\Users\28233\Documents\ChatGPT\WebCASIO\docs\输入测试报告.md`：中文测试报告（方法、总览、测试表、bug、Android 一致性、常数清单+来源 CW 说明书 p.57 / CODATA 2018 + 精度说明、已验证 vs 未验证）。
+- `www\index.html` 在 S5 **零改动**：153 条一次全绿，未发现需最小化修复的新 bug（输入健壮性已在 S2/S3 内核改造中根治）。
+- 回归（全部通过）：`node tools\editor-core.test.js`→`2223 passed`；`node tools\suite.js`→`SUITE OK 153/153`；`node s3check.js`→`errors: []`；`node tools\s4check.js`→`S4CHECK OK`。
+- Android 副本：`Copy-Item` 覆盖 `android\app\src\main\assets\public\index.html` 后，`Compare-Object`（字节数组 + 逐行）均为空 → 逐字节相同（135394 B / 2478 行，CRLF 2478、无落单 LF、无 BOM）；套件对该副本重跑亦 `153/153`。
+- 运行方式：`cd %TEMP%\webcasio-test; node C:\Users\28233\Documents\ChatGPT\WebCASIO\tools\suite.js`（可用 `CALC` 环境变量指向待测 index.html）。
+- 未验证：Android WebView 真机触摸（长按 450ms 阈值、滑动>8px 取消插入仅用鼠标事件模拟）、常数面板内运算符不可达的真机 UX 手感。
+
 ## 待办明细
 
-### S5 要做的事
-大批量逐键输入 + 中途 DEL + 最终 `=` 的回归套件，产出 Markdown 测试报告给用户；`Compare-Object` 校验后同步到 `android\app\src\main\assets\public\index.html`。
+- 无（S0–S5 全部 DONE）。
 
 ## 纪律
 - 绝不动 `.github/workflows/1.tex`（用户自有文件）。
 - 必须保持 `www\index.html` 单文件（内联 JS/CSS，不拆外链）。
 - 含中文的文件一律用 `exec_command` + PowerShell here-string + `Set-Content -Encoding UTF8` 写（`js` 工具会拒绝源码里的全角标点）。
+
+

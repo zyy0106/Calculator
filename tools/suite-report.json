@@ -1,0 +1,928 @@
+{
+  "pass": 153,
+  "fail": 0,
+  "total": 153,
+  "stepBad": [],
+  "report": [
+    {
+      "seq": "1 + 1 =",
+      "expected": "2",
+      "actual": "= 2",
+      "ok": true
+    },
+    {
+      "seq": "9 - 4 =",
+      "expected": "5",
+      "actual": "= 5",
+      "ok": true
+    },
+    {
+      "seq": "6 * 7 =",
+      "expected": "42",
+      "actual": "= 42",
+      "ok": true
+    },
+    {
+      "seq": "8 / 2 =",
+      "expected": "4",
+      "actual": "= 4",
+      "ok": true
+    },
+    {
+      "seq": "2 + 3 * 4 =",
+      "expected": "14",
+      "actual": "= 14",
+      "ok": true
+    },
+    {
+      "seq": "( 2 + 3 ) * 4 =",
+      "expected": "20",
+      "actual": "= 20",
+      "ok": true
+    },
+    {
+      "seq": "1 0 0 - 1 =",
+      "expected": "99",
+      "actual": "= 99",
+      "ok": true
+    },
+    {
+      "seq": "1 2 3 4 5 6 7 * 8 =",
+      "expected": "9876536",
+      "actual": "= 9.876536e+6",
+      "ok": true
+    },
+    {
+      "seq": ". 5 + . 5 =",
+      "expected": "1",
+      "actual": "= 1",
+      "ok": true
+    },
+    {
+      "seq": "3 . 1 4 1 5 9 =",
+      "expected": "3.14159",
+      "actual": "= 3.14159",
+      "ok": true
+    },
+    {
+      "seq": "0 =",
+      "expected": "0",
+      "actual": "= 0",
+      "ok": true
+    },
+    {
+      "seq": "7 - 9 =",
+      "expected": "-2",
+      "actual": "= -2",
+      "ok": true
+    },
+    {
+      "seq": "1 2 3 DEL + 4 =",
+      "expected": "16",
+      "actual": "= 16",
+      "ok": true
+    },
+    {
+      "seq": "5 + 6 DEL 7 - 2 =",
+      "expected": "10",
+      "actual": "= 10",
+      "ok": true
+    },
+    {
+      "seq": "3 . 1 4 DEL DEL 5 9 =",
+      "expected": "3.59",
+      "actual": "= 3.59",
+      "ok": true
+    },
+    {
+      "seq": "9 9 9 DEL DEL DEL 7 =",
+      "expected": "7",
+      "actual": "= 7",
+      "ok": true
+    },
+    {
+      "seq": "1 + 2 + 3 DEL DEL 9 =",
+      "expected": "30",
+      "actual": "= 30",
+      "ok": true
+    },
+    {
+      "seq": "2 POW 3 R R DEL + 1 =",
+      "expected": "16",
+      "actual": "= 16",
+      "ok": true
+    },
+    {
+      "seq": "2 POW 3 R DEL 4 =",
+      "expected": "17179869184",
+      "actual": "= 1.717986918e+10",
+      "ok": true
+    },
+    {
+      "seq": "FRAC 3 R 4 DEL 2 =",
+      "expected": "1.5",
+      "actual": "= 1.5",
+      "ok": true
+    },
+    {
+      "seq": "5 + 6 L L DEL 7 - 2 =",
+      "expected": "11",
+      "actual": "= 11",
+      "ok": true
+    },
+    {
+      "seq": "5 + 6 L DEL 7 =",
+      "expected": "576",
+      "actual": "= 576",
+      "ok": true
+    },
+    {
+      "seq": "1 2 + 3 4 L L L DEL =",
+      "expected": "35",
+      "actual": "= 35",
+      "ok": true
+    },
+    {
+      "seq": "2 POW 3 R R L DEL 4 =",
+      "expected": "16",
+      "actual": "= 16",
+      "ok": true
+    },
+    {
+      "seq": "SQRT 8 1 R L DEL 9 =",
+      "expected": "9.433981132056603",
+      "actual": "= 9.433981132",
+      "ok": true
+    },
+    {
+      "seq": "( 1 + 2 ) * 3 L L DEL =",
+      "expected": "7",
+      "actual": "= 7",
+      "ok": true
+    },
+    {
+      "seq": "1 0 L DEL 5 R + 1 =",
+      "expected": "51",
+      "actual": "= 51",
+      "ok": true
+    },
+    {
+      "seq": "9 L L L 1 =",
+      "expected": "19",
+      "actual": "= 19",
+      "ok": true
+    },
+    {
+      "seq": "FRAC 1 R 2 =",
+      "expected": "0.5",
+      "actual": "= 0.5",
+      "ok": true
+    },
+    {
+      "seq": "FRAC 1 R 3 =",
+      "expected": "0.3333333333333333",
+      "actual": "= 0.3333333333",
+      "ok": true
+    },
+    {
+      "seq": "FRAC 1 R 2 R + FRAC 1 R 4 =",
+      "expected": "0.75",
+      "actual": "= 0.75",
+      "ok": true
+    },
+    {
+      "seq": "FRAC 3 R 4 R * 8 =",
+      "expected": "6",
+      "actual": "= 6",
+      "ok": true
+    },
+    {
+      "seq": "FRAC FRAC 1 R 2 R R 3 =",
+      "expected": "0.16666666666666666",
+      "actual": "= 0.1666666667",
+      "ok": true
+    },
+    {
+      "seq": "FRAC 1 R 2 R R + 9 DEL 3 =",
+      "expected": "3.5",
+      "actual": "= 3.5",
+      "ok": true
+    },
+    {
+      "seq": "FRAC 1 R SQRT 2 =",
+      "expected": "0.7071067811865475",
+      "actual": "= 0.7071067812",
+      "ok": true
+    },
+    {
+      "seq": "FRAC 2 R 2 R R R + 1 =",
+      "expected": "2",
+      "actual": "= 2",
+      "ok": true
+    },
+    {
+      "seq": "2 POW 3 =",
+      "expected": "8",
+      "actual": "= 8",
+      "ok": true
+    },
+    {
+      "seq": "2 POW 1 0 R =",
+      "expected": "1024",
+      "actual": "= 1024",
+      "ok": true
+    },
+    {
+      "seq": "3 POW 4 R =",
+      "expected": "81",
+      "actual": "= 81",
+      "ok": true
+    },
+    {
+      "seq": "2 POW 3 4 R =",
+      "expected": "17179869184",
+      "actual": "= 1.717986918e+10",
+      "ok": true
+    },
+    {
+      "seq": "( 2 + 3 ) POW 2 =",
+      "expected": "25",
+      "actual": "= 25",
+      "ok": true
+    },
+    {
+      "seq": "SQRT 2 R R POW 2 =",
+      "expected": "2",
+      "actual": "= 2",
+      "ok": true
+    },
+    {
+      "seq": "5 POW 0 R =",
+      "expected": "1",
+      "actual": "= 1",
+      "ok": true
+    },
+    {
+      "seq": "2 POW 3 R + 2 POW 2 =",
+      "expected": "12",
+      "actual": "= 12",
+      "ok": true
+    },
+    {
+      "seq": "SQRT 9 R =",
+      "expected": "3",
+      "actual": "= 3",
+      "ok": true
+    },
+    {
+      "seq": "SQRT 2 R =",
+      "expected": "1.4142135623730951",
+      "actual": "= 1.414213562",
+      "ok": true
+    },
+    {
+      "seq": "SQRT 1 6 R =",
+      "expected": "4",
+      "actual": "= 4",
+      "ok": true
+    },
+    {
+      "seq": "SQRT SQRT 1 6 =",
+      "expected": "2",
+      "actual": "= 2",
+      "ok": true
+    },
+    {
+      "seq": "SQRT 8 R + SQRT 2 =",
+      "expected": "4.242640687119286",
+      "actual": "= 4.242640687",
+      "ok": true
+    },
+    {
+      "seq": "SQRT 4 9 R * 2 =",
+      "expected": "14",
+      "actual": "= 14",
+      "ok": true
+    },
+    {
+      "seq": "COS 0 ) =",
+      "expected": "1",
+      "actual": "= 1",
+      "ok": true
+    },
+    {
+      "seq": "SIN 0 ) =",
+      "expected": "0",
+      "actual": "= 0",
+      "ok": true
+    },
+    {
+      "seq": "SIN PI / 2 ) =",
+      "expected": "1",
+      "actual": "= 1",
+      "ok": true
+    },
+    {
+      "seq": "COS PI ) =",
+      "expected": "-1",
+      "actual": "= -1",
+      "ok": true
+    },
+    {
+      "seq": "TAN PI / 4 ) =",
+      "expected": "0.9999999999999999",
+      "actual": "= 1",
+      "ok": true
+    },
+    {
+      "seq": "SIN PI / 6 ) =",
+      "expected": "0.49999999999999994",
+      "actual": "= 0.5",
+      "ok": true
+    },
+    {
+      "seq": "SIN 3 0 ) =",
+      "expected": "-0.9880316240928618",
+      "actual": "= -0.9880316241",
+      "ok": true
+    },
+    {
+      "seq": "COS 0 ) + SIN 0 ) =",
+      "expected": "1",
+      "actual": "= 1",
+      "ok": true
+    },
+    {
+      "seq": "LG 1 0 0 0 ) =",
+      "expected": "3",
+      "actual": "= 3",
+      "ok": true
+    },
+    {
+      "seq": "LG 1 ) =",
+      "expected": "0",
+      "actual": "= 0",
+      "ok": true
+    },
+    {
+      "seq": "LN E ) =",
+      "expected": "1",
+      "actual": "= 1",
+      "ok": true
+    },
+    {
+      "seq": "LN 1 ) =",
+      "expected": "0",
+      "actual": "= 0",
+      "ok": true
+    },
+    {
+      "seq": "LG 1 0 0 ) + LN E ) =",
+      "expected": "3",
+      "actual": "= 3",
+      "ok": true
+    },
+    {
+      "seq": "1 EXP 3 =",
+      "expected": "1000",
+      "actual": "= 1000",
+      "ok": true
+    },
+    {
+      "seq": "2 . 5 EXP 2 =",
+      "expected": "250",
+      "actual": "= 250",
+      "ok": true
+    },
+    {
+      "seq": "1 . 5 EXP 3 =",
+      "expected": "1500",
+      "actual": "= 1500",
+      "ok": true
+    },
+    {
+      "seq": "6 EXP 2 R + 1 =",
+      "expected": "601",
+      "actual": "= 601",
+      "ok": true
+    },
+    {
+      "seq": "3 EXP 0 R =",
+      "expected": "3",
+      "actual": "= 3",
+      "ok": true
+    },
+    {
+      "seq": "DER x POW 2 R R 3 =",
+      "expected": "6",
+      "actual": "= 6",
+      "ok": true
+    },
+    {
+      "seq": "DER x POW 3 R R 2 =",
+      "expected": "12",
+      "actual": "= 12",
+      "ok": true
+    },
+    {
+      "seq": "DER SIN x ) R 0 =",
+      "expected": "1",
+      "actual": "= 1",
+      "ok": true
+    },
+    {
+      "seq": "DER x POW 2 R R 0 =",
+      "expected": "0",
+      "actual": "= 0",
+      "ok": true
+    },
+    {
+      "seq": "INT x R 0 R 1 =",
+      "expected": "0.5",
+      "actual": "= 0.5",
+      "ok": true
+    },
+    {
+      "seq": "INT x POW 2 R R 0 R 1 =",
+      "expected": "0.3333333333333333",
+      "actual": "= 0.3333333333",
+      "ok": true
+    },
+    {
+      "seq": "INT SIN x R 0 R PI =",
+      "expected": "2",
+      "actual": "= 2",
+      "ok": true
+    },
+    {
+      "seq": "INT 1 R 0 R 5 =",
+      "expected": "5",
+      "actual": "= 5",
+      "ok": true
+    },
+    {
+      "seq": "FRAC SQRT 2 R R 2 =",
+      "expected": "0.7071067811865476",
+      "actual": "= 0.7071067812",
+      "ok": true
+    },
+    {
+      "seq": "SQRT FRAC 9 R 4 =",
+      "expected": "1.5",
+      "actual": "= 1.5",
+      "ok": true
+    },
+    {
+      "seq": "2 POW FRAC 1 R 2 R R =",
+      "expected": "1.4142135623730951",
+      "actual": "= 1.414213562",
+      "ok": true
+    },
+    {
+      "seq": "( 1 + SQRT 2 R ) POW 2 =",
+      "expected": "5.82842712474619",
+      "actual": "= 5.828427125",
+      "ok": true
+    },
+    {
+      "seq": "FRAC 1 R 2 R + FRAC 1 R 3 R + FRAC 1 R 6 =",
+      "expected": "1",
+      "actual": "= 1",
+      "ok": true
+    },
+    {
+      "seq": "SQRT 3 R POW 2 =",
+      "expected": "3",
+      "actual": "= 3",
+      "ok": true
+    },
+    {
+      "seq": "LN E POW 2 R ) =",
+      "expected": "2",
+      "actual": "= 2",
+      "ok": true
+    },
+    {
+      "seq": "5 = ANS + 3 =",
+      "expected": "28",
+      "actual": "= 28",
+      "ok": true
+    },
+    {
+      "seq": "5 = AC ANS + 3 =",
+      "expected": "8",
+      "actual": "= 8",
+      "ok": true
+    },
+    {
+      "seq": "1 0 = AC SQRT ANS R =",
+      "expected": "3.1622776601683795",
+      "actual": "= 3.16227766",
+      "ok": true
+    },
+    {
+      "seq": "7 = AC ANS * ANS =",
+      "expected": "49",
+      "actual": "= 49",
+      "ok": true
+    },
+    {
+      "seq": "3 = AC ANS POW 2 R =",
+      "expected": "9",
+      "actual": "= 9",
+      "ok": true
+    },
+    {
+      "seq": "2 0 = AC ANS / 4 =",
+      "expected": "5",
+      "actual": "= 5",
+      "ok": true
+    },
+    {
+      "seq": "1 / 0 =",
+      "expected": "数学错误",
+      "actual": "数学错误",
+      "ok": true
+    },
+    {
+      "seq": "FRAC 1 =",
+      "expected": "语法错误",
+      "actual": "语法错误",
+      "ok": true
+    },
+    {
+      "seq": "( 1 + 2 =",
+      "expected": "3",
+      "actual": "= 3",
+      "ok": true
+    },
+    {
+      "seq": "SIN ) =",
+      "expected": "语法错误",
+      "actual": "语法错误",
+      "ok": true
+    },
+    {
+      "seq": "+ 5 =",
+      "expected": "5",
+      "actual": "= 5",
+      "ok": true
+    },
+    {
+      "seq": "1 2 3 4 5 DEL DEL + 6 7 8 =",
+      "expected": "801",
+      "actual": "= 801",
+      "ok": true
+    },
+    {
+      "seq": "9 8 7 6 L L DEL DEL R R =",
+      "expected": "76",
+      "actual": "= 76",
+      "ok": true
+    },
+    {
+      "seq": "2 * 3 + 4 * 5 =",
+      "expected": "26",
+      "actual": "= 26",
+      "ok": true
+    },
+    {
+      "seq": "1 0 0 / 4 / 5 =",
+      "expected": "5",
+      "actual": "= 5",
+      "ok": true
+    },
+    {
+      "seq": "2 POW 2 R POW 2 R =",
+      "expected": "16",
+      "actual": "= 16",
+      "ok": true
+    },
+    {
+      "seq": "FRAC 1 0 R 4 R + . 5 =",
+      "expected": "3",
+      "actual": "= 3",
+      "ok": true
+    },
+    {
+      "seq": "2 POW 2 R =",
+      "expected": "4",
+      "actual": "= 4",
+      "ok": true
+    },
+    {
+      "seq": "3 POW 2 R =",
+      "expected": "9",
+      "actual": "= 9",
+      "ok": true
+    },
+    {
+      "seq": "4 POW 2 R =",
+      "expected": "16",
+      "actual": "= 16",
+      "ok": true
+    },
+    {
+      "seq": "5 POW 2 R =",
+      "expected": "25",
+      "actual": "= 25",
+      "ok": true
+    },
+    {
+      "seq": "6 POW 2 R =",
+      "expected": "36",
+      "actual": "= 36",
+      "ok": true
+    },
+    {
+      "seq": "7 POW 2 R =",
+      "expected": "49",
+      "actual": "= 49",
+      "ok": true
+    },
+    {
+      "seq": "8 POW 2 R =",
+      "expected": "64",
+      "actual": "= 64",
+      "ok": true
+    },
+    {
+      "seq": "9 POW 2 R =",
+      "expected": "81",
+      "actual": "= 81",
+      "ok": true
+    },
+    {
+      "seq": "1 0 POW 2 R =",
+      "expected": "100",
+      "actual": "= 100",
+      "ok": true
+    },
+    {
+      "seq": "1 1 POW 2 R =",
+      "expected": "121",
+      "actual": "= 121",
+      "ok": true
+    },
+    {
+      "seq": "1 2 POW 2 R =",
+      "expected": "144",
+      "actual": "= 144",
+      "ok": true
+    },
+    {
+      "seq": "1 3 POW 2 R =",
+      "expected": "169",
+      "actual": "= 169",
+      "ok": true
+    },
+    {
+      "seq": "1 2 + 7 9 DEL =",
+      "expected": "19",
+      "actual": "= 19",
+      "ok": true
+    },
+    {
+      "seq": "3 4 + 5 6 9 DEL =",
+      "expected": "90",
+      "actual": "= 90",
+      "ok": true
+    },
+    {
+      "seq": "9 + 9 0 9 DEL =",
+      "expected": "99",
+      "actual": "= 99",
+      "ok": true
+    },
+    {
+      "seq": "1 0 0 + 2 5 0 9 DEL =",
+      "expected": "350",
+      "actual": "= 350",
+      "ok": true
+    },
+    {
+      "seq": "7 + 8 9 DEL =",
+      "expected": "15",
+      "actual": "= 15",
+      "ok": true
+    },
+    {
+      "seq": "4 5 + 5 5 9 DEL =",
+      "expected": "100",
+      "actual": "= 100",
+      "ok": true
+    },
+    {
+      "seq": "1 1 + 2 2 9 DEL =",
+      "expected": "33",
+      "actual": "= 33",
+      "ok": true
+    },
+    {
+      "seq": "6 3 + 3 7 9 DEL =",
+      "expected": "100",
+      "actual": "= 100",
+      "ok": true
+    },
+    {
+      "seq": "SQRT 1 R =",
+      "expected": "1",
+      "actual": "= 1",
+      "ok": true
+    },
+    {
+      "seq": "SQRT 4 R =",
+      "expected": "2",
+      "actual": "= 2",
+      "ok": true
+    },
+    {
+      "seq": "SQRT 9 R =",
+      "expected": "3",
+      "actual": "= 3",
+      "ok": true
+    },
+    {
+      "seq": "SQRT 1 6 R =",
+      "expected": "4",
+      "actual": "= 4",
+      "ok": true
+    },
+    {
+      "seq": "SQRT 2 5 R =",
+      "expected": "5",
+      "actual": "= 5",
+      "ok": true
+    },
+    {
+      "seq": "SQRT 3 6 R =",
+      "expected": "6",
+      "actual": "= 6",
+      "ok": true
+    },
+    {
+      "seq": "SQRT 4 9 R =",
+      "expected": "7",
+      "actual": "= 7",
+      "ok": true
+    },
+    {
+      "seq": "SQRT 6 4 R =",
+      "expected": "8",
+      "actual": "= 8",
+      "ok": true
+    },
+    {
+      "seq": "SQRT 8 1 R =",
+      "expected": "9",
+      "actual": "= 9",
+      "ok": true
+    },
+    {
+      "seq": "SQRT 1 0 0 R =",
+      "expected": "10",
+      "actual": "= 10",
+      "ok": true
+    },
+    {
+      "seq": "SQRT 1 2 1 R =",
+      "expected": "11",
+      "actual": "= 11",
+      "ok": true
+    },
+    {
+      "seq": "SQRT 1 4 4 R =",
+      "expected": "12",
+      "actual": "= 12",
+      "ok": true
+    },
+    {
+      "seq": "LONGPRESS qe (700ms)",
+      "expected": "shows value, NOT inserted",
+      "actual": "shown=true ser=",
+      "ok": true
+    },
+    {
+      "seq": "CONST const:c0 key:* key:2 =",
+      "expected": "599584916",
+      "actual": "= 5.99584916e+8",
+      "ok": true
+    },
+    {
+      "seq": "CONST const:qe =",
+      "expected": "1.602176634e-19",
+      "actual": "= 1.602176634e-19",
+      "ok": true
+    },
+    {
+      "seq": "CONST const:NA key:* const:qe =",
+      "expected": "96485.33212331001",
+      "actual": "= 96485.33212",
+      "ok": true
+    },
+    {
+      "seq": "CONST const:me key:* const:c0 key:* const:c0 =",
+      "expected": "8.187105776823886e-14",
+      "actual": "= 8.187105777e-14",
+      "ok": true
+    },
+    {
+      "seq": "CONST const:h key:* const:c0 =",
+      "expected": "1.9864458571489286e-25",
+      "actual": "= 1.986445857e-25",
+      "ok": true
+    },
+    {
+      "seq": "CONST const:k key:* const:NA =",
+      "expected": "8.31446261815324",
+      "actual": "= 8.314462618",
+      "ok": true
+    },
+    {
+      "seq": "CONST key:2 const:hbar =",
+      "expected": "2.109143635292313e-34",
+      "actual": "= 2.109143635e-34",
+      "ok": true
+    },
+    {
+      "seq": "CONST const:pi key:* key:2 =",
+      "expected": "6.283185307179586",
+      "actual": "= 6.283185307",
+      "ok": true
+    },
+    {
+      "seq": "CONST const:mue key:* const:pi =",
+      "expected": "-2.9168948585338687e-23",
+      "actual": "= -2.916894859e-23",
+      "ok": true
+    },
+    {
+      "seq": "CONST const:eps0 key:* key:1 key:=longdel",
+      "expected": "one DEL removes eps0 atom",
+      "actual": "afterUnit=\"8.8541878128e-12\" afterAtomDEL=\"\"",
+      "ok": true
+    },
+    {
+      "seq": "CONST const:G key:* const:me =",
+      "expected": "6.079875963892145e-41",
+      "actual": "= 6.079875964e-41",
+      "ok": true
+    },
+    {
+      "seq": "CONST const:Rgas =",
+      "expected": "8.31446261815324",
+      "actual": "= 8.314462618",
+      "ok": true
+    },
+    {
+      "seq": "CONST const:gn key:* key:2 =",
+      "expected": "19.6133",
+      "actual": "= 19.6133",
+      "ok": true
+    },
+    {
+      "seq": "CONST const:phi key:* const:phi =",
+      "expected": "2.618033988749895",
+      "actual": "= 2.618033989",
+      "ok": true
+    },
+    {
+      "seq": "CONST const:e key:* key:2 =",
+      "expected": "5.43656365691809",
+      "actual": "= 5.436563657",
+      "ok": true
+    },
+    {
+      "seq": "FUNC f=x^2-2, g=sin(x)",
+      "expected": "fx/gx saved",
+      "actual": "fx=((x)^(2))-2 gx=sin(x)",
+      "ok": true
+    },
+    {
+      "seq": "MAIN f(3)+g(0)",
+      "expected": 7,
+      "actual": "= 7",
+      "ok": true
+    },
+    {
+      "seq": "MAIN a+x+f(x) (a=6,x=1.5)",
+      "expected": 7.75,
+      "actual": "= 7.75",
+      "ok": true
+    },
+    {
+      "seq": "PLOT render fx/gx",
+      "expected": "no overflow",
+      "actual": "overflow=false",
+      "ok": true
+    },
+    {
+      "seq": "ROOTS f in [-3,3]",
+      "expected": "+/-1.41421356",
+      "actual": "𝑥 1 = − 1.41421356 x 1 ​ =−1.41421356 𝑥 2 = 1.41421356 x 2 ​ =1.41421356",
+      "ok": true
+    }
+  ],
+  "fails": [],
+  "pageErrors": []
+}
