@@ -1,0 +1,314 @@
+[
+ {
+  "seq": [
+   "1",
+   "+",
+   "2"
+  ],
+  "tex": "1+2\\htmlClass{cursor-blink}{|}",
+  "texCursor": "1+2\\htmlClass{cursor-blink}{|}",
+  "texNoCursor": "1+2",
+  "ser": "1+2"
+ },
+ {
+  "seq": [
+   "sqrt(",
+   "8"
+  ],
+  "tex": "\\sqrt{8\\htmlClass{cursor-blink}{|}}",
+  "texCursor": "\\sqrt{8\\htmlClass{cursor-blink}{|}}",
+  "texNoCursor": "\\sqrt{8}",
+  "ser": "sqrt((8))"
+ },
+ {
+  "seq": [
+   "sqrt(",
+   "8",
+   "R"
+  ],
+  "tex": "\\sqrt{8}\\htmlClass{cursor-blink}{|}",
+  "texCursor": "\\sqrt{8}\\htmlClass{cursor-blink}{|}",
+  "texNoCursor": "\\sqrt{8}",
+  "ser": "sqrt((8))"
+ },
+ {
+  "seq": [
+   "frac(",
+   "1",
+   ",",
+   "2"
+  ],
+  "tex": "\\frac{1}{2\\htmlClass{cursor-blink}{|}}",
+  "texCursor": "\\frac{1}{2\\htmlClass{cursor-blink}{|}}",
+  "texNoCursor": "\\frac{1}{2}",
+  "ser": "((1)/(2))"
+ },
+ {
+  "seq": [
+   "frac(",
+   "1",
+   "R",
+   "2",
+   "R"
+  ],
+  "tex": "\\frac{1}{2}\\htmlClass{cursor-blink}{|}",
+  "texCursor": "\\frac{1}{2}\\htmlClass{cursor-blink}{|}",
+  "texNoCursor": "\\frac{1}{2}",
+  "ser": "((1)/(2))"
+ },
+ {
+  "seq": [
+   "(",
+   "1",
+   "+",
+   "2",
+   ")"
+  ],
+  "tex": "\\left(1+2\\right)\\htmlClass{cursor-blink}{|}",
+  "texCursor": "\\left(1+2\\right)\\htmlClass{cursor-blink}{|}",
+  "texNoCursor": "\\left(1+2\\right)",
+  "ser": "(1+2)"
+ },
+ {
+  "seq": [
+   "(",
+   "1",
+   "+",
+   "2"
+  ],
+  "tex": "\\left(1+2\\htmlClass{cursor-blink}{|}\\right.\\htmlClass{ghost-paren}{)}",
+  "texCursor": "\\left(1+2\\htmlClass{cursor-blink}{|}\\right.\\htmlClass{ghost-paren}{)}",
+  "texNoCursor": "\\left(1+2\\right.\\htmlClass{ghost-paren}{)}",
+  "ser": "(1+2)"
+ },
+ {
+  "seq": [
+   "sin(",
+   "x",
+   ")",
+   "^{}",
+   "2"
+  ],
+  "tex": "{\\sin\\left(x\\right)}^{2\\htmlClass{cursor-blink}{|}}",
+  "texCursor": "{\\sin\\left(x\\right)}^{2\\htmlClass{cursor-blink}{|}}",
+  "texNoCursor": "{\\sin\\left(x\\right)}^{2}",
+  "ser": "((sin(x))^(2))"
+ },
+ {
+  "seq": [
+   "2",
+   "pi"
+  ],
+  "tex": "2\\htmlClass{const-sym}{\\pi}\\htmlClass{cursor-blink}{|}",
+  "texCursor": "2\\htmlClass{const-sym}{\\pi}\\htmlClass{cursor-blink}{|}",
+  "texNoCursor": "2\\htmlClass{const-sym}{\\pi}",
+  "ser": "(2*pi)"
+ },
+ {
+  "seq": [
+   "1",
+   "/",
+   "2",
+   "pi"
+  ],
+  "tex": "1\\div 2\\htmlClass{const-sym}{\\pi}\\htmlClass{cursor-blink}{|}",
+  "texCursor": "1\\div 2\\htmlClass{const-sym}{\\pi}\\htmlClass{cursor-blink}{|}",
+  "texNoCursor": "1\\div 2\\htmlClass{const-sym}{\\pi}",
+  "ser": "1/(2*pi)"
+ },
+ {
+  "seq": [
+   "int(",
+   "x",
+   ",",
+   "0",
+   ",",
+   "1"
+  ],
+  "tex": "\\int_{0}^{1\\htmlClass{cursor-blink}{|}} x\\,\\mathrm{d}x",
+  "texCursor": "\\int_{0}^{1\\htmlClass{cursor-blink}{|}} x\\,\\mathrm{d}x",
+  "texNoCursor": "\\int_{0}^{1} x\\,\\mathrm{d}x",
+  "ser": "int((x),(0),(1))"
+ },
+ {
+  "seq": [
+   "deriv(",
+   "x",
+   "^{2}",
+   ",",
+   "3"
+  ],
+  "tex": "\\left.\\frac{\\mathrm{d}}{\\mathrm{d}x}\\left({x}^{2}\\right)\\right|_{x=3\\htmlClass{cursor-blink}{|}}",
+  "texCursor": "\\left.\\frac{\\mathrm{d}}{\\mathrm{d}x}\\left({x}^{2}\\right)\\right|_{x=3\\htmlClass{cursor-blink}{|}}",
+  "texNoCursor": "\\left.\\frac{\\mathrm{d}}{\\mathrm{d}x}\\left({x}^{2}\\right)\\right|_{x=3}",
+  "ser": "deriv((((x)^(2))),(3))"
+ },
+ {
+  "seq": [
+   "x",
+   "^{}",
+   "2",
+   "R",
+   "+",
+   "1"
+  ],
+  "tex": "{x}^{2}+1\\htmlClass{cursor-blink}{|}",
+  "texCursor": "{x}^{2}+1\\htmlClass{cursor-blink}{|}",
+  "texNoCursor": "{x}^{2}+1",
+  "ser": "((x)^(2))+1"
+ },
+ {
+  "seq": [
+   "1",
+   "*10^{}",
+   "3"
+  ],
+  "tex": "{1}\\times10^{3\\htmlClass{cursor-blink}{|}}",
+  "texCursor": "{1}\\times10^{3\\htmlClass{cursor-blink}{|}}",
+  "texNoCursor": "{1}\\times10^{3}",
+  "ser": "((1)*10^(3))"
+ },
+ {
+  "seq": [
+   "*10^{}",
+   "3"
+  ],
+  "tex": "\\times10^{3\\htmlClass{cursor-blink}{|}}",
+  "texCursor": "\\times10^{3\\htmlClass{cursor-blink}{|}}",
+  "texNoCursor": "\\times10^{3}",
+  "ser": "((1)*10^(3))"
+ },
+ {
+  "seq": [
+   "^{}",
+   "2"
+  ],
+  "tex": "\\htmlClass{base-missing}{\\square}^{2\\htmlClass{cursor-blink}{|}}",
+  "texCursor": "\\htmlClass{base-missing}{\\square}^{2\\htmlClass{cursor-blink}{|}}",
+  "texNoCursor": "\\htmlClass{base-missing}{\\square}^{2}",
+  "ser": "((\u0000)^(2))"
+ },
+ {
+  "seq": [
+   "Ans",
+   "*",
+   "e"
+  ],
+  "tex": "\\mathrm{Ans}\\times \\htmlClass{const-sym}{\\mathrm{e}}\\htmlClass{cursor-blink}{|}",
+  "texCursor": "\\mathrm{Ans}\\times \\htmlClass{const-sym}{\\mathrm{e}}\\htmlClass{cursor-blink}{|}",
+  "texNoCursor": "\\mathrm{Ans}\\times \\htmlClass{const-sym}{\\mathrm{e}}",
+  "ser": "Ans*e"
+ },
+ {
+  "seq": [
+   "(",
+   "(",
+   "1",
+   ")",
+   ")",
+   "^{2}"
+  ],
+  "tex": "{\\left(\\left(1\\right)\\right)}^{2}\\htmlClass{cursor-blink}{|}",
+  "texCursor": "{\\left(\\left(1\\right)\\right)}^{2}\\htmlClass{cursor-blink}{|}",
+  "texNoCursor": "{\\left(\\left(1\\right)\\right)}^{2}",
+  "ser": "((((1)))^(2))"
+ },
+ {
+  "seq": [
+   "frac(",
+   "frac(",
+   "1"
+  ],
+  "tex": "\\frac{\\frac{1\\htmlClass{cursor-blink}{|}}{\\square}}{\\square}",
+  "texCursor": "\\frac{\\frac{1\\htmlClass{cursor-blink}{|}}{\\square}}{\\square}",
+  "texNoCursor": "\\frac{\\frac{1}{\\square}}{\\square}",
+  "ser": "((((1)/(\u0000)))/(\u0000))"
+ },
+ {
+  "seq": [
+   "sqrt(",
+   "frac(",
+   "1",
+   ",",
+   "2",
+   "R",
+   "R",
+   "L",
+   "L"
+  ],
+  "tex": "\\sqrt{\\frac{1}{2\\htmlClass{cursor-blink}{|}}}",
+  "texCursor": "\\sqrt{\\frac{1}{2\\htmlClass{cursor-blink}{|}}}",
+  "texNoCursor": "\\sqrt{\\frac{1}{2}}",
+  "ser": "sqrt((((1)/(2))))"
+ },
+ {
+  "seq": [],
+  "tex": "\\htmlClass{cursor-blink}{|}",
+  "texCursor": "\\htmlClass{cursor-blink}{|}",
+  "texNoCursor": "",
+  "ser": ""
+ },
+ {
+  "seq": [
+   "log(",
+   "a",
+   "+",
+   "b",
+   "L",
+   "L"
+  ],
+  "tex": "\\ln\\left(a\\htmlClass{cursor-blink}{|}+b\\right.\\htmlClass{ghost-paren}{)}",
+  "texCursor": "\\ln\\left(a\\htmlClass{cursor-blink}{|}+b\\right.\\htmlClass{ghost-paren}{)}",
+  "texNoCursor": "\\ln\\left(a+b\\right.\\htmlClass{ghost-paren}{)}",
+  "ser": "log(a+b)"
+ },
+ {
+  "seq": [
+   "frac(",
+   "1",
+   "R",
+   "R",
+   "DEL"
+  ],
+  "tex": "\\frac{1\\htmlClass{cursor-blink}{|}}{\\square}",
+  "texCursor": "\\frac{1\\htmlClass{cursor-blink}{|}}{\\square}",
+  "texNoCursor": "\\frac{1}{\\square}",
+  "ser": "((1)/(\u0000))"
+ },
+ {
+  "seq": [
+   "f(",
+   "x",
+   ")",
+   "+",
+   "g(",
+   "y"
+  ],
+  "tex": "f\\left(x\\right)+g\\left(y\\htmlClass{cursor-blink}{|}\\right.\\htmlClass{ghost-paren}{)}",
+  "texCursor": "f\\left(x\\right)+g\\left(y\\htmlClass{cursor-blink}{|}\\right.\\htmlClass{ghost-paren}{)}",
+  "texNoCursor": "f\\left(x\\right)+g\\left(y\\right.\\htmlClass{ghost-paren}{)}",
+  "ser": "f(x)+g(y)"
+ },
+ {
+  "seq": [
+   "x",
+   "^{}",
+   "L",
+   "L"
+  ],
+  "tex": "\\htmlClass{cursor-blink}{|}{x}^{\\square}",
+  "texCursor": "\\htmlClass{cursor-blink}{|}{x}^{\\square}",
+  "texNoCursor": "{x}^{\\square}",
+  "ser": "((x)^(\u0000))"
+ },
+ {
+  "seq": [
+   "frac(",
+   "L"
+  ],
+  "tex": "\\htmlClass{cursor-blink}{|}\\frac{\\square}{\\square}",
+  "texCursor": "\\htmlClass{cursor-blink}{|}\\frac{\\square}{\\square}",
+  "texNoCursor": "\\frac{\\square}{\\square}",
+  "ser": "((\u0000)/(\u0000))"
+ }
+]

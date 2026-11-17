@@ -148,8 +148,21 @@
         .const-cell.show-val .c-sym, .const-cell.show-val .c-name { display: none; }
         .const-cell.show-val .c-val { display: block; }
 
-        .keyboard { flex: 1; display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; min-height: 0; }
-        .main-cursor-row { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; min-height: 0; }
+        .keyboard { flex: 1; display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+        .kb-row-6, .kb-row-5 { flex: 1; min-height: 0; display: grid; gap: 6px; }
+        .kb-row-6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+        .kb-row-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+        .kb-row-6 > *, .kb-row-5 > * { min-width: 0; }
+        .kb-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; min-width: 0; }
+        .kb-pair > button { min-width: 0; padding: 0; }
+        .key-long { position: relative; padding: 0; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: none; }
+        .key-long .k-alt { display: none; }
+        .key-long.show-alt { background: #eef4fd; border-color: var(--btn-primary); }
+        .key-long.show-alt .k-def { display: none; }
+        .key-long.show-alt .k-alt { display: inline; }
+        .key-pop { position: absolute; bottom: calc(100% + 6px); right: 0; z-index: 50; display: flex; gap: 4px; padding: 4px; background: #fff; border: 1px solid var(--btn-primary); border-radius: 10px; box-shadow: 0 4px 14px rgba(0,0,0,.18); }
+        .key-pop .kp-item { min-width: 52px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: #f3f6fa; font-size: 19px; }
+        .key-pop .kp-item.hover { background: var(--btn-primary); color: #fff; }
         button {
             border: 1px solid #eaedf0; border-radius: 12px; background-color: #fff;
             cursor: pointer; transition: all 0.1s;
@@ -191,6 +204,7 @@
 
         .root-results { flex: 1; overflow-y: auto; background: white; border-radius: 14px; padding: 12px; border: 1px solid #ddd; }
         .root-katex-item { padding: 5px 0; border-bottom: 1px solid #f5f5f5; font-size: 18px; }
+        .root-resid { font-size: 11px; color: #888; font-family: var(--cm); }
 
         .fit-input-cell {
             width: 100%; text-align: center; border: 1px solid #e0e6ed; border-radius: 8px;
@@ -450,6 +464,7 @@
     background: #fdfdfd;
 }
 .matrix-cell:focus { outline: none; border-color: var(--btn-primary); }
+.ec-anchor { display:inline-block; min-width:2px; pointer-events:auto; }
     </style>
 </head>
 <body>
@@ -472,6 +487,7 @@
         <div class="var-card" id="var-row-x" onclick="selectVar('x')"><div class="var-name-cell" id="vname-x"></div><div class="var-val-cell" id="vval-x">0</div></div>
         <div class="var-card" id="var-row-y" onclick="selectVar('y')"><div class="var-name-cell" id="vname-y"></div><div class="var-val-cell" id="vval-y">0</div></div>
         <div class="var-card" id="var-row-z" onclick="selectVar('z')"><div class="var-name-cell" id="vname-z"></div><div class="var-val-cell" id="vval-z">0</div></div>
+        <div class="var-card" id="var-row-t" onclick="selectVar('t')"><div class="var-name-cell" id="vname-t"></div><div class="var-val-cell" id="vval-t">0</div></div>
     </div>
 
     <div class="screen" id="main-screen">
@@ -484,14 +500,33 @@
 
     <div style="display:none;flex-direction:column;gap:8px;flex:1;" id="roots-panel">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <button class="nav-btn active" id="root-mode-alg"   onclick="setRootMode('alg')">代数求根</button>
+            <button class="nav-btn"        id="root-mode-inteq" onclick="setRootMode('inteq')">积分方程</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
             <button class="nav-btn active" id="root-target-f" onclick="setRootTarget('f')">针对 f(x)</button>
             <button class="nav-btn"        id="root-target-g" onclick="setRootTarget('g')">针对 g(x)</button>
+        </div>
+        <div id="inteq-inputs" style="display:none;flex-direction:column;gap:6px;flex-shrink:0;">
+            <div style="font-size:11px;color:#666;line-height:1.4;">方程 ∫<sub>a(x)</sub><sup>b(x)</sup> F(t, x) dt = c：F 取自上方所选 f(x)/g(x) 编辑器内容，其中 t 为积分哑元、x 为待求参数</div>
+            <div class="boundary-grid">
+                <div class="boundary-item"><span>a(x)</span><input type="text" id="inteqLower" value="0"></div>
+                <div class="boundary-item"><span>b(x)</span><input type="text" id="inteqUpper" value="x"></div>
+                <div class="boundary-item" style="grid-column:span 2;"><span>c</span><input type="text" id="inteqC" value="2"></div>
+            </div>
+            <details style="font-size:11px;color:#666;"><summary>高级</summary>
+                <div class="boundary-grid one-row" style="margin-top:4px;">
+                    <div class="boundary-item"><span>n</span><input type="number" id="inteqN" value="64" step="2"></div>
+                    <div class="boundary-item"><span>steps</span><input type="number" id="inteqSteps" value="400" step="100"></div>
+                </div>
+            </details>
         </div>
         <div class="boundary-grid one-row">
             <div class="boundary-item"><span>Start</span><input type="number" id="rootX1" value="-10" step="1"></div>
             <div class="boundary-item"><span>End</span>  <input type="number" id="rootX2" value="10"  step="1"></div>
         </div>
-        <button class="btn-calc" style="font-size:16px;padding:8px;border-radius:12px;" onclick="calculateRoots()">执行求根</button>
+        <button class="btn-calc" style="font-size:16px;padding:8px;border-radius:12px;" id="root-btn-alg" onclick="calculateRoots()">执行求根</button>
+        <button class="btn-calc" style="font-size:16px;padding:8px;border-radius:12px;display:none;" id="root-btn-inteq" onclick="calculateIntegralEq()">求解积分方程</button>
         <div class="root-results" id="root-list"></div>
     </div>
 
@@ -649,60 +684,67 @@
         <button class="btn-var-sm btn-const" id="btn-const" onclick="toggleConstPanel()">物理常数</button>
     </div>
 
-    <div class="keyboard" id="keyboard-area">
+        <div class="keyboard" id="keyboard-area">
+            <div class="kb-row-6">
         <button class="btn-func" onclick="append('f(')">f<span style="font-style:normal;">(x)</span></button>
         <button class="btn-func" onclick="append('g(')">g<span style="font-style:normal;">(x)</span></button>
         <button onclick="append('int(')">∫</button>
         <button onclick="append('deriv(')">d/dx</button>
+            <button onclick="moveCursor(-1)">←</button>
+            <button onclick="moveCursor(1)">→</button>
+            </div>
+            <div class="kb-row-6">
         <button onclick="append('x')">x</button>
-
-        <button onclick="append('sqrt(')">√</button>
         <button onclick="append('frac(')" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1.5px; padding-top:2px;">
             <div style="width:11px; height:11px; border:1.5px solid currentColor; box-sizing:border-box;"></div>
             <div style="width:16px; height:2px; background-color:currentColor;"></div>
             <div style="width:11px; height:11px; border:1.5px solid currentColor; box-sizing:border-box;"></div>
         </button>
-        <button onclick="append('^{}')">xⁿ</button>
-        <button onclick="append('log10(')">lg</button>
-        <button onclick="append('log(')">ln</button>
-
-        <button onclick="append('sin(')">sin</button>
-        <button onclick="append('cos(')">cos</button>
-        <button onclick="append('tan(')">tan</button>
+        <button onclick="append('sqrt(')">√</button>
+            <button onclick="append('^{}')">x<sup style="font-size:0.6em;">y</sup></button>
+            <button onclick="append('^{2}')">x²</button>
+            <button class="key-long" id="key-logb" data-short="log_(" style="font-size:16px;">log<sub style="font-size:0.65em;">x</sub>(y)</button>
+            </div>
+            <div class="kb-row-6">
+            <button class="key-long" id="key-sin" data-short="sin(" data-long="asin("><span class="k-def">sin</span><span class="k-alt">sin⁻¹</span></button>
+            <button class="key-long" id="key-cos" data-short="cos(" data-long="acos("><span class="k-def">cos</span><span class="k-alt">cos⁻¹</span></button>
+            <button class="key-long" id="key-tan" data-short="tan(" data-long="atan("><span class="k-def">tan</span><span class="k-alt">tan⁻¹</span></button>
         <button onclick="append('pi')">π</button>
         <button onclick="append('e')">e</button>
-
-        <div class="main-cursor-row">
-            <button onclick="append('(')">(</button>
-            <button onclick="append(')')">)</button>
-            <button onclick="moveCursor(-1)">←</button>
-            <button onclick="moveCursor(1)">→</button>
-        </div>
-
+            <div class="kb-pair">
+                <button onclick="append('(')">(</button>
+                <button onclick="append(')')">)</button>
+            </div>
+            </div>
+            <div class="kb-row-5">
         <button onclick="append('7')">7</button>
         <button onclick="append('8')">8</button>
         <button onclick="append('9')">9</button>
         <button class="btn-danger" onclick="deleteLast()">DEL</button>
         <button class="btn-danger" onclick="clearAll()">AC</button>
-
+            </div>
+            <div class="kb-row-5">
         <button onclick="append('4')">4</button>
         <button onclick="append('5')">5</button>
         <button onclick="append('6')">6</button>
         <button onclick="append('*')">×</button>
         <button onclick="append('/')">÷</button>
-
+            </div>
+            <div class="kb-row-5">
         <button onclick="append('1')">1</button>
         <button onclick="append('2')">2</button>
         <button onclick="append('3')">3</button>
         <button onclick="append('+')">+</button>
         <button onclick="append('-')">-</button>
-
+            </div>
+            <div class="kb-row-5">
         <button onclick="append('0')">0</button>
         <button onclick="append('.')">.</button>
         <button onclick="append('*10^{}')">×10ⁿ</button>
         <button onclick="append('Ans')">Ans</button>
         <button class="btn-calc" onclick="calculate()">=</button>
-    </div>
+            </div>
+        </div>
 
     <div id="const-panel">
         <div class="const-toolbar">
@@ -904,15 +946,17 @@
   var SQ_CUR_TEX = '\\htmlClass{cursor-blink}{\\square}';
   var GHOST_CLOSE_TEX = '\\right.\\htmlClass{ghost-paren}{)}';
   var BASE_MISSING_TEX = '\\htmlClass{base-missing}{\\square}';
+  var XCLOSE_TEX = ')';   // stray right bracket (no matching open): rendered bare
+  function anchorTex(path) { return '\\htmlId{ec-' + path + '}{\\htmlClass{ec-anchor}{\\phantom{|}}}'; }
 
-  var NODE_SLOTS = { frac: 2, sqrt: 1, int: 3, deriv: 2, pow: 1, sci: 1 };
+  var NODE_SLOTS = { frac: 2, sqrt: 1, int: 3, deriv: 2, pow: 1, sci: 1, logb: 2 };   // logb: s0 argument, s1 base
   // node types whose rendering needs \left( \right) when used as a power base
-  var PW_TYPES = { frac: true, pow: true, sci: true, int: true, deriv: true };
-  var FN_INPUT = { 'sin(': 'sin', 'cos(': 'cos', 'tan(': 'tan', 'log10(': 'log10', 'log(': 'log', 'f(': 'f', 'g(': 'g' };
-  var FN_TEX = { '': '', sin: '\\sin', cos: '\\cos', tan: '\\tan', log10: '\\lg', log: '\\ln', f: 'f', g: 'g' };
-  var NODE_INPUT = { 'sqrt(': 'sqrt', 'frac(': 'frac', 'int(': 'int', 'deriv(': 'deriv' };
+  var PW_TYPES = { frac: true, pow: true, sci: true, int: true, deriv: true, logb: true };
+  var FN_INPUT = { 'sin(': 'sin', 'cos(': 'cos', 'tan(': 'tan', 'asin(': 'asin', 'acos(': 'acos', 'atan(': 'atan', 'log10(': 'log10', 'log(': 'log', 'f(': 'f', 'g(': 'g' };
+  var FN_TEX = { '': '', sin: '\\sin', cos: '\\cos', tan: '\\tan', asin: '\\sin^{-1}', acos: '\\cos^{-1}', atan: '\\tan^{-1}', log10: '\\lg', log: '\\ln', f: 'f', g: 'g' };
+  var NODE_INPUT = { 'sqrt(': 'sqrt', 'frac(': 'frac', 'int(': 'int', 'deriv(': 'deriv', 'log_(': 'logb' };
   var OP_TEX = { '+': '+', '-': '-', '*': '\\times ', '/': '\\div ' };
-  var VARS = { a: 1, b: 1, c: 1, x: 1, y: 1, z: 1 };
+  var VARS = { a: 1, b: 1, c: 1, x: 1, y: 1, z: 1, t: 1 };
 
   function has(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
 
@@ -958,7 +1002,7 @@
 
   var editors = {};
   ['main', 'fx', 'gx'].forEach(function (k) { editors[k] = newEditor(); });
-  ['a', 'b', 'c', 'x', 'y', 'z'].forEach(function (k) { editors['var_' + k] = newEditor(); });
+  ['a', 'b', 'c', 'x', 'y', 'z', 't'].forEach(function (k) { editors['var_' + k] = newEditor(); });
 
   /* ---------------- host integration ---------------- */
   function defaultGetKey() {
@@ -1097,6 +1141,7 @@
       else if (it.t === 'const') add('operand', constSer(it.id));
       else if (it.t === 'open') stack.push({ fn: it.fn, parts: [] });
       else if (it.t === 'close') { if (stack.length > 1) closeFrame(); }
+      else if (it.t === 'xclose') add('op', EMPTY_MARK + ')');   // stray ')': always a syntax error
       else if (it.t === 'pow' || it.t === 'sci') {
         var base = takeBase(top().parts);
         var expCode = serSlot(it.s[0]);
@@ -1114,6 +1159,7 @@
     if (n.t === 'frac') return '((' + serSlot(n.s[0]) + ')/(' + serSlot(n.s[1]) + '))';
     if (n.t === 'sqrt') return 'sqrt((' + serSlot(n.s[0]) + '))';
     if (n.t === 'int') return 'int((' + serSlot(n.s[0]) + '),(' + serSlot(n.s[1]) + '),(' + serSlot(n.s[2]) + '))';
+    if (n.t === 'logb') return 'log((' + serSlot(n.s[0]) + '),(' + serSlot(n.s[1]) + '))';
     if (n.t === 'deriv') return 'deriv((' + serSlot(n.s[0]) + '),(' + serSlot(n.s[1]) + '))';
     return EMPTY_MARK;
   }
@@ -1160,24 +1206,28 @@
     }
     return out;
   }
-  function texSlot(b, cur) {
-    if (b.length === 0) return (cur && cur.block === b) ? SQ_CUR_TEX : SQ_TEX;
-    return texBlock(b, cur);
+  // ctx (anchors only): { path: '<block path>' }, same format as cursorPath without ':idx'
+  function childCtx(ctx, n, i, si) { return ctx ? { path: ctx.path + '>' + n.t + '@' + i + '.s' + si } : null; }
+  function texSlot(b, cur, ctx) {
+    if (b.length === 0) return (ctx ? anchorTex(ctx.path + ':0') : '') + ((cur && cur.block === b) ? SQ_CUR_TEX : SQ_TEX);
+    return texBlock(b, cur, ctx);
   }
-  function texNode(n, cur) {
-    if (n.t === 'frac') return '\\frac{' + texSlot(n.s[0], cur) + '}{' + texSlot(n.s[1], cur) + '}';
-    if (n.t === 'sqrt') return '\\sqrt{' + texSlot(n.s[0], cur) + '}';
+  function texNode(n, cur, ctx, ni) {
+    function sl(k) { return texSlot(n.s[k], cur, childCtx(ctx, n, ni, k)); }
+    if (n.t === 'frac') return '\\frac{' + sl(0) + '}{' + sl(1) + '}';
+    if (n.t === 'sqrt') return '\\sqrt{' + sl(0) + '}';
     if (n.t === 'int') {
-      return '\\int_{' + texSlot(n.s[1], cur) + '}^{' + texSlot(n.s[2], cur) + '} ' +
-        texSlot(n.s[0], cur) + '\\,\\mathrm{d}x';
+      return '\\int_{' + sl(1) + '}^{' + sl(2) + '} ' +
+        sl(0) + '\\,\\mathrm{d}x';
     }
+    if (n.t === 'logb') return '\\log_{' + sl(1) + '}\\left(' + sl(0) + '\\right)';
     if (n.t === 'deriv') {
-      return '\\left.\\frac{\\mathrm{d}}{\\mathrm{d}x}\\left(' + texSlot(n.s[0], cur) +
-        '\\right)\\right|_{x=' + texSlot(n.s[1], cur) + '}';
+      return '\\left.\\frac{\\mathrm{d}}{\\mathrm{d}x}\\left(' + sl(0) +
+        '\\right)\\right|_{x=' + sl(1) + '}';
     }
     return SQ_TEX;
   }
-  function texBlock(block, cur) {
+  function texBlock(block, cur, ctx) {
     var hasCur = !!(cur && cur.block === block);
     var stack = [{ fn: '', parts: [] }];
     function top() { return stack[stack.length - 1]; }
@@ -1190,6 +1240,7 @@
       add('operand', fnt + '\\left(' + body + (closed ? '\\right)' : GHOST_CLOSE_TEX), false);
     }
     for (var i = 0; i <= block.length; i++) {
+      if (ctx) add('cursor', anchorTex(ctx.path + ':' + i));
       if (hasCur && cur.idx === i) add('cursor', CUR_TEX);
       if (i === block.length) break;
       var it = block[i];
@@ -1200,9 +1251,10 @@
       else if (it.t === 'const') add('operand', '\\htmlClass{const-sym}{' + constTex(it.id) + '}');
       else if (it.t === 'open') stack.push({ fn: it.fn, parts: [] });
       else if (it.t === 'close') { if (stack.length > 1) closeFrame(true); }
+      else if (it.t === 'xclose') add('op', XCLOSE_TEX);
       else if (it.t === 'pow' || it.t === 'sci') {
         var base = takeBase(top().parts);
-        var ex = texSlot(it.s[0], cur);
+        var ex = texSlot(it.s[0], cur, childCtx(ctx, it, i, 0));
         var s;
         if (base) {
           var bs = '{' + (base.pw ? '\\left(' + base.s + '\\right)' : base.s) + base.trail + '}';
@@ -1212,7 +1264,7 @@
         }
         add('operand', s, true);
       } else if (isNode(it)) {
-        add('operand', texNode(it, cur), !!PW_TYPES[it.t], it.t === 'frac');
+        add('operand', texNode(it, cur, ctx, i), !!PW_TYPES[it.t], it.t === 'frac');
       }
     }
     while (stack.length > 1) closeFrame(false);
@@ -1223,8 +1275,9 @@
     opts = opts || {};
     var e = ed(key);
     var cur = opts.cursor === false ? null : e.cur;
-    if (e.root.length === 0) return cur ? CUR_TEX : '';
-    return texBlock(e.root, cur);
+    var ctx = opts.anchors ? { path: 'root' } : null;
+    if (e.root.length === 0) return (ctx ? anchorTex('root:0') : '') + (cur ? CUR_TEX : '');
+    return texBlock(e.root, cur, ctx);
   }
 
   /* ---------------- editing ---------------- */
@@ -1288,9 +1341,8 @@
     var b = e.cur.block, i = e.cur.idx;
     if (pendingOpenIdx(b, i) !== -1) { insertItem(e, { t: 'close' }); return true; }
     if (i < b.length && b[i].t === 'close') { e.cur.idx = i + 1; return true; }
-    var p = findParent(e.root, b);
-    if (p) { e.cur.block = p.parentBlock; e.cur.idx = p.nodeIdx + 1; return true; }
-    return false;
+    insertItem(e, { t: 'xclose' });   // nothing to pair with (any level): stray ')'
+    return true;
   }
 
   function doDelete(e) {
@@ -1385,7 +1437,7 @@
   function keyToInput(key) {
     if (typeof key !== 'string') return null;
     if (key === '^') return '^{}';
-    if (/^[abcxyze0-9.+\-*\/(),]$/.test(key)) return key;
+    if (/^[abcxyzte0-9.+\-*\/(),]$/.test(key)) return key;
     return null;
   }
   function cursorPath(e) {
@@ -1399,6 +1451,53 @@
     }
     return ['root'].concat(chain).join('>') + ':' + e.cur.idx;
   }
+  // resolve 'root>sqrt@0.s0:1' to { block, idx } in editor e, or null when invalid
+  function resolvePath(e, path) {
+    if (typeof path !== 'string') return null;
+    var m = /^(.*):(0|[1-9][0-9]*)$/.exec(path);
+    if (!m) return null;
+    var segs = m[1].split('>');
+    if (segs[0] !== 'root') return null;
+    var b = e.root;
+    for (var i = 1; i < segs.length; i++) {
+      var sm = /^([a-z]+)@(0|[1-9][0-9]*)\.s(0|[1-9][0-9]*)$/.exec(segs[i]);
+      if (!sm) return null;
+      var n = b[Number(sm[2])], si = Number(sm[3]);
+      if (!isNode(n) || n.t !== sm[1] || si >= n.s.length) return null;
+      b = n.s[si];
+    }
+    var idx = Number(m[2]);
+    return idx <= b.length ? { block: b, idx: idx } : null;
+  }
+  function existingKey(key) {
+    var k = (key === undefined || key === null) ? activeEditorKey() : String(key);
+    return has(editors, k) ? k : null;
+  }
+  // move the cursor to a path from cursorPath/cursorPositions; invalid path: false, no state change
+  function setCursorPath(key, path) {
+    var k = existingKey(key);
+    if (k === null) return false;
+    var e = editors[k], r = resolvePath(e, path);
+    if (!r) return false;
+    e.cur.block = r.block;
+    e.cur.idx = r.idx;
+    notify(k);
+    return true;
+  }
+  // all legal cursor paths, left to right (slot order, same as stepping moveCursor right)
+  function cursorPositions(key) {
+    var k = existingKey(key), out = [];
+    if (k === null) return out;
+    (function walk(b, path) {
+      for (var i = 0; i <= b.length; i++) {
+        out.push(path + ':' + i);
+        if (i < b.length && isNode(b[i])) {
+          for (var si = 0; si < b[i].s.length; si++) walk(b[i].s[si], path + '>' + b[i].t + '@' + i + '.s' + si);
+        }
+      }
+    })(editors[k].root, 'root');
+    return out;
+  }
   function __dbg(key) {
     var k = key || activeEditorKey();
     var e = ed(k);
@@ -1410,6 +1509,7 @@
     append: append, deleteLast: deleteLast, moveCursor: moveCursor, clearAll: clearAll,
     renderTex: renderTex, serialize: serialize, isEmpty: isEmpty, cursorToEnd: cursorToEnd,
     keyToInput: keyToInput, configure: configure, setKey: setKey,
+    setCursorPath: setCursorPath, cursorPositions: cursorPositions, cursorPath: cursorPath,
     editors: editors, activeEditorKey: activeEditorKey, ed: ed, __dbg: __dbg,
     // internals (exported for tests and later steps)
     EMPTY_MARK: EMPTY_MARK, CUR_TEX: CUR_TEX, SQ_TEX: SQ_TEX, SQ_CUR_TEX: SQ_CUR_TEX,
@@ -1418,7 +1518,210 @@
     blockEmpty: blockEmpty, allSlotsEmpty: allSlotsEmpty, takeBase: takeBase,
     serBlock: serBlock, serSlot: serSlot, serNode: serNode, joinParts: joinParts,
     serializeRoot: serializeRoot, texBlock: texBlock, texSlot: texSlot, texNode: texNode,
-    joinTex: joinTex
+    joinTex: joinTex, anchorTex: anchorTex, resolvePath: resolvePath
+  };
+});
+</script>
+<script>
+/* WebCASIO parametric-limit integral equation solver (pure computation, no DOM).
+   Solves for the parameter x:   integral_{a(x)}^{b(x)} F(t, x) dt = c
+   t = dummy integration variable, x = unknown parameter (single real unknown).
+   Inner integral: composite Simpson, same scheme as customInt in www/index.html.
+   Outer root: sign-change scan of G(x) = I(x) - c over [xMin, xMax], then Brent.
+   Not supported: Fredholm/Volterra equations (unknown function), symbolic work,
+   string parsing (callers compile strings, e.g. with math.compile).
+
+   Browser: globalThis.InteqSolver      Node: var IS = require('./inteq-solver.js');
+   solveParamLimitIntegral never throws; failures return {ok:false, error:'...'}.
+   Source is ASCII only; non-ASCII text must be written as \uXXXX escapes. */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) {
+    module.exports = factory();
+  } else {
+    root.InteqSolver = factory();
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  'use strict';
+  var DEFAULT_N = 128, DEFAULT_STEPS = 2000, DEFAULT_TOL = 1e-12;
+  var MAX_N = 100000, MAX_STEPS = 100000;
+  var DEDUP = 1e-4;          // root clustering threshold (same as calculateRoots)
+  var EPS = 2.22e-16;
+
+  // Same idea as safeFnWrap: anything that is not a finite real becomes NaN.
+  function toReal(v) {
+    if (typeof v === 'number') return (isNaN(v) || !isFinite(v)) ? NaN : v;
+    if (v && typeof v === 'object' && 're' in v && 'im' in v) {
+      if (typeof v.re !== 'number' || typeof v.im !== 'number') return NaN;
+      if (Math.abs(v.im) > 1e-12 || !isFinite(v.re)) return NaN;
+      return v.re;
+    }
+    return NaN;
+  }
+  function safeCall(fn, a, b) {
+    try { return toReal(fn(a, b)); } catch (e) { return NaN; }
+  }
+  function isNum(v) { return typeof v === 'number' && isFinite(v); }
+  function evenN(n) {
+    n = Math.floor(n);
+    if (n < 2) n = 2;
+    return n % 2 === 0 ? n : n + 1;
+  }
+
+  // Composite Simpson of F(t, x) for t in [lo, hi]; returns NaN on any bad sample.
+  // counter (optional) accumulates the number of F evaluations.
+  function simpson(F, lo, hi, x, n, counter) {
+    if (!isNum(lo) || !isNum(hi)) return NaN;
+    if (lo === hi) {   // zero-length interval: still require F to be defined there
+      if (counter) counter.evals += 1;
+      var v0 = safeCall(F, lo, x);
+      return v0 === v0 ? 0 : NaN;
+    }
+    var h = (hi - lo) / n, cnt = 2;
+    var s = safeCall(F, lo, x) + safeCall(F, hi, x);
+    if (s === s) {
+      for (var i = 1; i < n; i++) {
+        var v = safeCall(F, lo + i * h, x);
+        cnt++;
+        if (v !== v) { s = NaN; break; }
+        s += v * (i % 2 === 0 ? 2 : 4);
+      }
+    }
+    if (counter) counter.evals += cnt;
+    var r = s * h / 3;
+    return isFinite(r) ? r : NaN;
+  }
+
+  // Public: same numeric scheme for reuse by the UI. Never throws, NaN on failure.
+  function integrate(F, lo, hi, x, n) {
+    try {
+      if (typeof F !== 'function') return NaN;
+      var m = (n === undefined || n === null) ? DEFAULT_N : n;
+      if (!isNum(m) || m < 2 || m > MAX_N) return NaN;
+      return simpson(F, toReal(lo), toReal(hi), x, evenN(m), null);
+    } catch (e) { return NaN; }
+  }
+
+  // Brent root finder, same algorithm as brent() in www/index.html.
+  function brent(f, a, b, tol) {
+    var fa = f(a), fb = f(b);
+    if (isNaN(fa) || isNaN(fb) || fa * fb > 0) return null;
+    if (Math.abs(fa) < tol) return a;
+    if (Math.abs(fb) < tol) return b;
+    var c = a, fc = fa, d = b - a, e = d;
+    for (var iter = 0; iter < 120; iter++) {
+      if (fb * fc > 0) { c = a; fc = fa; d = e = b - a; }
+      if (Math.abs(fc) < Math.abs(fb)) { a = b; b = c; c = a; fa = fb; fb = fc; fc = fa; }
+      var tol1 = 2 * EPS * Math.abs(b) + tol * 0.5, xm = (c - b) * 0.5;
+      if (Math.abs(xm) <= tol1 || Math.abs(fb) < tol) return b;
+      if (Math.abs(e) >= tol1 && Math.abs(fa) > Math.abs(fb)) {
+        var s = fb / fa, p, q, r;
+        if (a === c) { p = 2 * xm * s; q = 1 - s; }
+        else {
+          q = fa / fc; r = fb / fc;
+          p = s * (2 * xm * q * (q - r) - (b - a) * (r - 1));
+          q = (q - 1) * (r - 1) * (s - 1);
+        }
+        if (p > 0) q = -q; else p = -p;
+        if (2 * p < Math.min(3 * xm * q - Math.abs(tol1 * q), Math.abs(e * q))) { e = d; d = p / q; }
+        else { d = xm; e = d; }
+      } else { d = xm; e = d; }
+      a = b; fa = fb;
+      b += Math.abs(d) > tol1 ? d : (xm > 0 ? tol1 : -tol1);
+      fb = f(b);
+      if (isNaN(fb)) return null;
+    }
+    return b;
+  }
+
+  function fail(msg, evals) {
+    return { ok: false, roots: [], residuals: [], evals: evals || 0, error: msg };
+  }
+  // undefined/null -> def; otherwise must be a finite number in [lo, hi].
+  function optNum(v, def, lo, hi) {
+    if (v === undefined || v === null) return def;
+    if (!isNum(v) || v < lo || v > hi) return null;
+    return v;
+  }
+
+  function solveImpl(o) {
+    if (!o || typeof o !== 'object') return fail('\u53c2\u6570\u5fc5\u987b\u662f\u4e00\u4e2a\u5bf9\u8c61');
+    var F = o.F, lower = o.lower, upper = o.upper;
+    if (typeof F !== 'function') return fail('\u88ab\u79ef\u51fd\u6570 F(t, x) \u5fc5\u987b\u662f\u51fd\u6570');
+    if (typeof lower !== 'function') return fail('\u79ef\u5206\u4e0b\u9650 a(x) \u5fc5\u987b\u662f\u51fd\u6570');
+    if (typeof upper !== 'function') return fail('\u79ef\u5206\u4e0a\u9650 b(x) \u5fc5\u987b\u662f\u51fd\u6570');
+    var c = o.c;
+    if (!isNum(c)) return fail('\u65b9\u7a0b\u53f3\u7aef c \u5fc5\u987b\u662f\u6709\u9650\u5b9e\u6570');
+    var xMin = o.xMin, xMax = o.xMax;
+    if (!isNum(xMin) || !isNum(xMax)) return fail('\u641c\u7d22\u533a\u95f4\u7aef\u70b9 xMin\u3001xMax \u5fc5\u987b\u662f\u6709\u9650\u5b9e\u6570');
+    if (!(xMin < xMax)) return fail('\u641c\u7d22\u533a\u95f4\u5fc5\u987b\u6ee1\u8db3 xMin < xMax');
+    var steps = optNum(o.steps, DEFAULT_STEPS, 1, MAX_STEPS);
+    if (steps === null) return fail('\u626b\u63cf\u6b65\u6570 steps \u5fc5\u987b\u662f 1 \u5230 100000 \u4e4b\u95f4\u7684\u6570');
+    steps = Math.floor(steps);
+    var n = optNum(o.n, DEFAULT_N, 2, MAX_N);
+    if (n === null) return fail('Simpson \u5b50\u533a\u95f4\u6570 n \u5fc5\u987b\u662f 2 \u5230 100000 \u4e4b\u95f4\u7684\u6570');
+    n = evenN(n);
+    var tol = optNum(o.tol, DEFAULT_TOL, Number.MIN_VALUE, 1);
+    if (tol === null) return fail('\u6536\u655b\u5bb9\u5dee tol \u5fc5\u987b\u662f (0, 1] \u5185\u7684\u5b9e\u6570');
+
+    var counter = { evals: 0 };
+    var G = function (x) {
+      var a = safeCall(lower, x), b = safeCall(upper, x);
+      if (a !== a || b !== b) return NaN;
+      var I = simpson(F, a, b, x, n, counter);
+      return I === I ? I - c : NaN;
+    };
+    var xs = [], gs = [], valid = 0, i;
+    for (i = 0; i <= steps; i++) {
+      var x = (i === steps) ? xMax : xMin + (xMax - xMin) * i / steps;
+      var g = G(x);
+      xs.push(x); gs.push(g);
+      if (g === g) valid++;
+    }
+    if (valid === 0) {
+      return fail('\u5728\u6574\u4e2a\u641c\u7d22\u533a\u95f4\u5185\u79ef\u5206\u90fd\u65e0\u6cd5\u6c42\u503c\uff08\u88ab\u79ef\u51fd\u6570\u6216\u79ef\u5206\u9650\u8fd4\u56de\u4e86\u975e\u5b9e\u6570\u3001NaN \u6216\u629b\u51fa\u5f02\u5e38\uff09', counter.evals);
+    }
+    var cand = [];
+    for (i = 0; i <= steps; i++) {
+      if (gs[i] === 0) cand.push(xs[i]);
+      if (i < steps && gs[i] * gs[i + 1] < 0) {   // NaN products are false
+        var r = brent(G, xs[i], xs[i + 1], tol);
+        if (r !== null) cand.push(r);
+      }
+    }
+    // Reject sign changes across discontinuities/poles: residual must be small.
+    var resLimit = 1e-6 * (1 + Math.abs(c));
+    var list = [];
+    for (i = 0; i < cand.length; i++) {
+      var res = Math.abs(G(cand[i]));
+      if (res === res && res <= resLimit) list.push({ x: cand[i], res: res });
+    }
+    list.sort(function (p, q) { return p.x - q.x; });
+    var kept = [];
+    for (i = 0; i < list.length; i++) {
+      var last = kept[kept.length - 1];
+      if (last && Math.abs(list[i].x - last.x) < DEDUP) {
+        if (list[i].res < last.res) kept[kept.length - 1] = list[i];
+      } else kept.push(list[i]);
+    }
+    return {
+      ok: true,
+      roots: kept.map(function (k) { return k.x; }),
+      residuals: kept.map(function (k) { return k.res; }),
+      evals: counter.evals,
+      error: null
+    };
+  }
+
+  function solveParamLimitIntegral(opts) {
+    try { return solveImpl(opts); }
+    catch (e) { return fail('\u6c42\u89e3\u8fc7\u7a0b\u4e2d\u53d1\u751f\u5185\u90e8\u9519\u8bef\uff1a' + (e && e.message ? e.message : String(e))); }
+  }
+
+  return {
+    solveParamLimitIntegral: solveParamLimitIntegral,
+    integrate: integrate,
+    DEFAULT_N: DEFAULT_N,
+    DEFAULT_STEPS: DEFAULT_STEPS
   };
 });
 </script>
@@ -1455,10 +1758,10 @@ let matrixCalcCursor = 0;
 let matrixLastAnswer = null;
 let matrixPreviousAnswer = 0;
 
-const VAR_KEYS   = ['a','b','c','x','y','z'];
-const VAR_LABELS = { a:'a', b:'b', c:'c', x:'x', y:'y', z:'z'};
-const varExprs   = { a:'', b:'', c:'', x:'', y:'', z:''};
-const varVals    = { a:0,  b:0,  c:0,  x:0,  y:0,  z:0};
+const VAR_KEYS   = ['a','b','c','x','y','z','t'];
+const VAR_LABELS = { a:'a', b:'b', c:'c', x:'x', y:'y', z:'z', t:'t'};
+const varExprs   = { a:'', b:'', c:'', x:'', y:'', z:'', t:''};
+const varVals    = { a:0,  b:0,  c:0,  x:0,  y:0,  z:0,  t:0};
 let activeVar    = 'a';
 
 const singleDisplay = document.getElementById('single-line-display');
@@ -1579,7 +1882,7 @@ function selectVar(k) {
 
 function getCombinedScope() {
     const scope = new Map(Object.entries({
-        a: varVals.a, b: varVals.b, c: varVals.c, y: varVals.y, z: varVals.z, Ans: lastAnswerVal
+        a: varVals.a, b: varVals.b, c: varVals.c, y: varVals.y, z: varVals.z, t: varVals.t, Ans: lastAnswerVal
     }));
     if (varExprs.x !== '') scope.set('x', varVals.x);
     try { if (state.expr.fx) math.evaluate(`f(x) = ${getEvalString(state.expr.fx)}`, scope); } catch(e) {}
@@ -1589,21 +1892,73 @@ function getCombinedScope() {
 
 // 公式框 TeX 由编辑器树直接生成 (参数保留以兼容旧调用, 不再使用)
 function getDisplayTex(expr, mode) {
-    let tex = EditorCore.renderTex(EditorCore.activeEditorKey(), { cursor: true });
+    let tex = EditorCore.renderTex(EditorCore.activeEditorKey(), { cursor: true, anchors: true });
     if (state.mode === 'funcs') tex = (state.funcTarget === 'f' ? 'f(x) = ' : 'g(x) = ') + tex;
     if (state.mode === 'vars') tex = VAR_LABELS[activeVar] + ' = ' + tex;
     return tex;
 }
-function renderLatex() {
-    try {
+window.__ec_autoscroll_enabled = true;
+function scrollCursorIntoView(container) {
+    if (!container || window.__ec_autoscroll_enabled === false) return;
+    var max = Math.max(0, container.scrollWidth - container.clientWidth);
+    var c = container.querySelector('.cursor-blink') || container.querySelector('.base-missing');
+    if (!c) { container.scrollLeft = container.scrollWidth; return; }
+    var cr = container.getBoundingClientRect(), r = c.getBoundingClientRect();
+    var left = r.left - cr.left + container.scrollLeft, right = r.right - cr.left + container.scrollLeft;
+    var sl = container.scrollLeft;
+    if (right + 24 > sl + container.clientWidth) sl = right - container.clientWidth + 24;
+    if (left - 24 < sl) sl = left - 24;
+    container.scrollLeft = Math.min(max, Math.max(0, sl));
+}
+function renderLatex() {    try {
         let tex = getDisplayTex(currentExpression, state.mode);
         // 注意这里将 throwOnError 改为 true，主动暴露渲染错误
         katex.render(tex, singleDisplay, { displayMode:true, throwOnError:true, trust:true });
+        scrollCursorIntoView(singleDisplay);
     } catch (e) {
         // 捕获错误并输出平滑的中文提示
         singleDisplay.innerHTML = `<div style="color:var(--btn-danger); font-size:16px; font-weight:800; display:flex; justify-content:center; align-items:center; padding-top:15px; font-family: sans-serif;">表达式过于复杂，请简化</div>`;
     }
 }
+
+const TAP_MAX_MS = 250, TAP_MAX_PX = 10;
+function tapCursorAt(clientX) {
+    if (EditorCore.isEmpty(EditorCore.activeEditorKey())) return false;
+    const as = [...singleDisplay.querySelectorAll('.ec-anchor')].map(a => a.closest('[id^="ec-"]')).filter(Boolean);
+    if (!as.length) return false;
+    let best = null, bd = Infinity, maxEl = null, maxX = -Infinity;
+    as.forEach(a => { const r = a.getBoundingClientRect(); const cx = (r.left + r.right) / 2;
+        if (cx > maxX) { maxX = cx; maxEl = a; }
+        const d = Math.abs(cx - clientX); if (d < bd) { bd = d; best = a; } });
+    if (clientX > maxX) best = maxEl;
+    const ok = EditorCore.setCursorPath(EditorCore.activeEditorKey(), best.id.slice(3));
+    if (ok) { window.__ec_autoscroll_enabled = false; renderLatex(); window.__ec_autoscroll_enabled = true; }
+    return ok;
+}
+function bindDisplayTap(el) {
+    let pid = null, t0 = 0, x0 = 0, y0 = 0, moved = false;
+    const editable = () => state.mode === 'main' || state.mode === 'funcs' || state.mode === 'vars';
+    const end = () => { pid = null; window.__ec_autoscroll_enabled = true; };
+    el.addEventListener('pointerdown', e => {
+        if (!editable() || (e.pointerType === 'mouse' && e.button !== 0)) return;
+        pid = e.pointerId; t0 = performance.now(); x0 = e.clientX; y0 = e.clientY; moved = false;
+        window.__ec_autoscroll_enabled = false;
+    });
+    el.addEventListener('pointermove', e => {
+        if (e.pointerId !== pid) return;
+        if (!moved && Math.hypot(e.clientX - x0, e.clientY - y0) > TAP_MAX_PX) moved = true;
+    });
+    el.addEventListener('pointerup', e => {
+        if (e.pointerId !== pid) return;
+        const dt = performance.now() - t0;
+        if (!moved && Math.hypot(e.clientX - x0, e.clientY - y0) > TAP_MAX_PX) moved = true;
+        if (!moved && dt <= TAP_MAX_MS && editable()) tapCursorAt(e.clientX);
+        end();
+    });
+    el.addEventListener('pointercancel', e => { if (e.pointerId === pid) end(); });
+    el.addEventListener('pointerleave', e => { if (e.pointerId === pid) end(); });
+}
+bindDisplayTap(singleDisplay);
 
 function updatePlotScreen() {
     const renderNoPrefix = (id, label, key) => {
@@ -1619,12 +1974,12 @@ function updatePlotScreen() {
     renderNoPrefix('line-gx', 'g(x)', 'gx');
 }
 
-function append(v) { EditorCore.append(v); renderLatex(); }
+function append(v) { window.__ec_autoscroll_enabled = true; EditorCore.append(v); renderLatex(); }
 
-function deleteLast() { EditorCore.deleteLast(); renderLatex(); }
+function deleteLast() { window.__ec_autoscroll_enabled = true; EditorCore.deleteLast(); renderLatex(); }
 
 function clearAll() {
-    EditorCore.clearAll(); renderLatex();
+    window.__ec_autoscroll_enabled = true; EditorCore.clearAll(); renderLatex();
     if (state.mode === 'main') resVal.innerText = '0';
     if (state.mode === 'vars') {
         if (activeVar === 'x' && varExprs.x === '') resVal.innerText = 'x 未定义';
@@ -2183,6 +2538,7 @@ function switchMode(m) {
 
     document.querySelectorAll('.top-nav .nav-btn').forEach(b => b.classList.remove('active'));
     document.getElementById('nav-' + m).classList.add('active');
+    window.__ec_autoscroll_enabled = true;
     state.mode = m;
     if (constPanelOpen) setConstPanel(false);
 
@@ -2196,7 +2552,7 @@ function switchMode(m) {
     document.getElementById('fit-subnav').style.display     = isFit ? 'grid' : 'none';
     document.getElementById('matrix-subnav').style.display  = isMatrix ? 'grid' : 'none';
     document.getElementById('main-screen').style.display    = (isRoots || isFit || isMatrix) ? 'none'  : 'flex';
-    document.getElementById('keyboard-area').style.display  = (isPlot || isRoots || isFit || isMatrix) ? 'none' : 'grid';
+    document.getElementById('keyboard-area').style.display  = (isPlot || isRoots || isFit || isMatrix) ? 'none' : 'flex';
     document.getElementById('var-btns-row').style.display   = (isPlot || isRoots || isFit || isMatrix) ? 'none' : 'grid';
     document.getElementById('graph-area').style.display     = isPlot  ? 'flex'  : 'none';
     document.getElementById('roots-panel').style.display    = isRoots ? 'flex'  : 'none';
@@ -2296,6 +2652,92 @@ function calculateRoots() {
         if (!clustered.length) listEl.innerText = '未发现实根';
         else clustered.forEach((r, idx) => { const div = document.createElement('div'); div.className = 'root-katex-item'; listEl.appendChild(div); katex.render(`x_{${idx + 1}} = ${parseFloat(r.toFixed(8))}`, div); });
     } catch(e) { listEl.innerText = xUndefinedErr(e) ? '计算出错: x 未定义' : '计算出错: ' + e.message; }
+}
+
+// I4b: 积分方程 ∫_{a(x)}^{b(x)} F(t,x) dt = c，关于参数 x 求解（S1 InteqSolver）
+function setRootMode(m) {
+    state.rootMode = m;
+    const inteq = m === 'inteq';
+    document.getElementById('root-mode-alg').classList.toggle('active', !inteq);
+    document.getElementById('root-mode-inteq').classList.toggle('active', inteq);
+    document.getElementById('inteq-inputs').style.display = inteq ? 'flex' : 'none';
+    document.getElementById('root-btn-alg').style.display = inteq ? 'none' : '';
+    document.getElementById('root-btn-inteq').style.display = inteq ? '' : 'none';
+    document.getElementById('root-list').innerHTML = '';
+}
+// 检查表达式中的自由符号是否都有定义；locals 为局部变量名（如 t、x）
+function inteqUndefinedSymbol(node, locals) {
+    let bad = null;
+    node.traverse(function (n, path, parent) {
+        if (bad || !n.isSymbolNode) return;
+        if (parent && parent.isFunctionNode && path === 'fn') return;
+        const s = n.name;
+        if (locals.indexOf(s) >= 0 || s === 'Ans') return;
+        if (Object.prototype.hasOwnProperty.call(varExprs, s)) { if (varExprs[s] === '') bad = s; return; }
+        if (!(s in math)) bad = s;
+    });
+    return bad;
+}
+function calculateIntegralEq() {
+    const listEl = document.getElementById('root-list');
+    listEl.innerHTML = ''; listEl.innerText = '计算中…';
+    setTimeout(function () {
+        const t0 = performance.now();
+        const msg = inteqRun(listEl); if (typeof msg === 'string') listEl.innerText = msg;
+        listEl.dataset.ms = String(Math.round(performance.now() - t0));
+    }, 0);
+}
+function inteqRun(listEl) {
+    const x1 = parseFloat(document.getElementById('rootX1').value), x2 = parseFloat(document.getElementById('rootX2').value);
+    const exp = state.expr[state.rootTarget === 'f' ? 'fx' : 'gx'];
+    if (!exp) return '被积函数未定义：请在函数选项卡输入 ' + (state.rootTarget === 'f' ? 'f(x)' : 'g(x)');
+    if (!(x1 < x2)) return 'Start 必须小于 End';
+    const fields = [['inteqLower', '下限 a(x)', ['x']], ['inteqUpper', '上限 b(x)', ['x']], ['inteqC', '右端常数 c', []]];
+    const nodes = [];
+    let fNode;
+    try { fNode = math.parse(getEvalString(exp)); } catch (e) { return '被积函数无法解析: ' + e.message; }
+    let bad = inteqUndefinedSymbol(fNode, ['t', 'x']);
+    if (bad) return '被积函数中变量未定义: ' + bad;
+    for (const [id, label, locals] of fields) {
+        const txt = document.getElementById(id).value.trim();
+        let node;
+        try { if (!txt) throw new Error('空'); node = math.parse(txt); } catch (e) { return label + ' 表达式无法解析'; }
+        if (node.filter(n => n.isSymbolNode && n.name === 't').length) return label + ' 不能含积分哑元 t';
+        if (!locals.length && node.filter(n => n.isSymbolNode && n.name === 'x').length) return '右端常数 c 无效（不能含 x）';
+        bad = inteqUndefinedSymbol(node, locals);
+        if (bad) return label + ' 中变量未定义: ' + bad;
+        nodes.push(node);
+    }
+    try {
+        const scope = getCombinedScope();
+        const fCode = fNode.compile(), loCode = nodes[0].compile(), upCode = nodes[1].compile();
+        const fs = new Map(scope), ls = new Map(scope);
+        const num = function (v) {
+            if (typeof v === 'number') return isFinite(v) ? v : NaN;
+            if (v && typeof v === 'object' && 're' in v) return Math.abs(v.im) > 1e-12 ? NaN : v.re;
+            return NaN;
+        };
+        const F = function (t, x) { try { fs.set('t', t); fs.set('x', x); return num(fCode.evaluate(fs)); } catch (e) { return NaN; } };
+        const lower = function (x) { try { ls.set('x', x); return num(loCode.evaluate(ls)); } catch (e) { return NaN; } };
+        const upper = function (x) { try { ls.set('x', x); return num(upCode.evaluate(ls)); } catch (e) { return NaN; } };
+        let c;
+        try { c = num(nodes[2].compile().evaluate(new Map(scope))); } catch (e) { c = NaN; }
+        if (!isFinite(c)) return '右端常数 c 无效';
+        const n = parseInt(document.getElementById('inteqN').value, 10), steps = parseInt(document.getElementById('inteqSteps').value, 10);
+        const r = InteqSolver.solveParamLimitIntegral({ F: F, lower: lower, upper: upper, c: c, xMin: x1, xMax: x2, steps: steps, n: n });
+        listEl.dataset.evals = String(r.evals);
+        if (!r.ok) return r.error;
+        if (!r.roots.length) return '未发现解';
+        listEl.innerHTML = '';
+        r.roots.forEach(function (x, idx) {
+            const div = document.createElement('div'); div.className = 'root-katex-item'; listEl.appendChild(div);
+            const v = Math.abs(x) < 1e-10 ? 0 : x;
+            katex.render((r.roots.length > 1 ? `x_{${idx + 1}}` : 'x') + ` = ${parseFloat(v.toFixed(8))}`, div);
+            const res = document.createElement('div'); res.className = 'root-resid';
+            res.textContent = '|G(x)| = ' + Number(r.residuals[idx]).toExponential(2); div.appendChild(res);
+        });
+        return undefined;
+    } catch (e) { return '计算出错: ' + e.message; }
 }
 
 function toggleTrace() { isTraceMode = !isTraceMode; const btn = document.getElementById('btn-trace'); if (isTraceMode) { btn.classList.add('active'); btn.innerText = '关闭追踪'; } else { btn.classList.remove('active'); btn.innerText = '开启追踪'; drawGraph(); } }
@@ -2453,11 +2895,51 @@ function bindConstCell(b) {
     // 键盘激活 (detail === 0) 没有 pointer 事件, 单独处理
     b.addEventListener('click', e => { if (e.detail === 0) append('const:' + b.dataset.id); });
 }
+        // I2: sin/cos/tan 长按反函数, log_x(y) 长按弹 ln / t 候选
+        const KEY_LONG_MS = 450, KEY_MOVE_PX = 8;
+        function bindLongKey(b) {
+            const isPop = b.id === 'key-logb';
+            let timer = null, pid = null, x0 = 0, y0 = 0, longShown = false, moved = false, pop = null, hover = null;
+            const setHover = el => { if (hover) hover.classList.remove('hover'); hover = el; if (hover) hover.classList.add('hover'); };
+            const reset = () => { clearTimeout(timer); timer = null; pid = null; b.classList.remove('show-alt'); setHover(null); if (pop) { pop.remove(); pop = null; } };
+            const showLong = () => {
+                timer = null; longShown = true;
+                if (!isPop) { b.classList.add('show-alt'); return; }
+                pop = document.createElement('div'); pop.className = 'key-pop';
+                pop.innerHTML = '<div class="kp-item" data-ins="log(">ln</div><div class="kp-item" data-ins="t">t</div>';
+                b.appendChild(pop);
+            };
+            const itemAt = e => { if (!pop) return null; const el = document.elementFromPoint(e.clientX, e.clientY); const it = el && el.closest && el.closest('.kp-item'); return it && pop.contains(it) ? it : null; };
+            b.addEventListener('pointerdown', e => {
+                if (e.pointerType === 'mouse' && e.button !== 0) return;
+                reset();
+                pid = e.pointerId; x0 = e.clientX; y0 = e.clientY; longShown = false; moved = false;
+                try { b.setPointerCapture(pid); } catch (_) {}
+                timer = setTimeout(showLong, KEY_LONG_MS);
+            });
+            b.addEventListener('pointermove', e => {
+                if (e.pointerId !== pid) return;
+                if (pop) { setHover(itemAt(e)); return; }
+                if (!moved && Math.hypot(e.clientX - x0, e.clientY - y0) > KEY_MOVE_PX) { moved = true; reset(); }
+            });
+            b.addEventListener('pointerup', e => {
+                if (e.pointerId !== pid) return;
+                let ins = null;
+                if (pop) { const it = itemAt(e); ins = it ? it.dataset.ins : null; }
+                else if (!moved) ins = longShown ? b.dataset.long : b.dataset.short;
+                reset();
+                if (ins) append(ins);
+            });
+            b.addEventListener('pointercancel', reset);
+            b.addEventListener('contextmenu', e => e.preventDefault());
+            b.addEventListener('click', e => { if (e.detail === 0) append(b.dataset.short); });
+        }
+        document.querySelectorAll('#keyboard-area .key-long').forEach(bindLongKey);
 function setConstPanel(open) {
     constPanelOpen = open;
     if (open) buildConstPanel();
     document.getElementById('const-panel').style.display = open ? 'flex' : 'none';
-    document.getElementById('keyboard-area').style.display = open ? 'none' : 'grid';
+    document.getElementById('keyboard-area').style.display = open ? 'none' : 'flex';
     document.getElementById('btn-const').classList.toggle('active', open);
 }
 function toggleConstPanel() { setConstPanel(!constPanelOpen); }

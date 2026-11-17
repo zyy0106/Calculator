@@ -92,7 +92,7 @@ seq('pow', ['2', '^{}', '3'], '((2)^(3))', { cur: 'root>pow@1.s0:1', tex: '{2}^{
 seq('pow missing base', ['^{}', '2'], '((\u0000)^(2))', { texHas: ['base-missing'] });
 seq('square', ['3', '^{2}', '+', '1'], '((3)^(2))+1', { cur: 'root:4' });
 seq('square of square', ['3', '^{2}', '^{2}'], '((((3)^(2)))^(2))', { texHas: ['\\left({3}^{2}\\right)'] });
-seq('sqrt', ['sqrt(', '2', ')', '+', '1'], 'sqrt((2))+1', { cur: 'root:3', tex: '\\sqrt{2}+1' });
+seq('sqrt', ['sqrt(', '2', 'R', '+', '1'], 'sqrt((2))+1', { cur: 'root:3', tex: '\\sqrt{2}+1' });
 seq('int', ['int(', 'x', ',', '0', ',', '1'], 'int((x),(0),(1))', { tex: '\\int_{0}^{1} x\\,\\mathrm{d}x' });
 seq('int empty', ['int('], 'int((\u0000),(\u0000),(\u0000))');
 seq('deriv', ['deriv(', 'x', '^{2}', ',', '3'], 'deriv((((x)^(2))),(3))',
@@ -101,15 +101,15 @@ seq('sci', ['1', '.', '5', '*10^{}', '3'], '((1.5)*10^(3))', { tex: '{1.5}\\time
 seq('sci missing base', ['*10^{}', '3'], '((1)*10^(3))', { tex: '\\times10^{3}' });
 
 /* ---- nesting ---- */
-seq('frac of sqrt', ['frac(', 'sqrt(', '2', ')', ',', '3', ')', '+', '1'], '((sqrt((2)))/(3))+1',
+seq('frac of sqrt', ['frac(', 'sqrt(', '2', 'R', ',', '3', 'R', '+', '1'], '((sqrt((2)))/(3))+1',
   { cur: 'root:3', tex: '\\frac{\\sqrt{2}}{3}+1' });
 seq('sqrt of sin', ['sqrt(', 'sin(', 'x'], 'sqrt((sin(x)))', { cur: 'root>sqrt@0.s0:2', texHas: ['ghost-paren'] });
 seq('frac in int', ['int(', 'frac(', '1', ',', 'x', ',', ',', '1', ',', '2'], 'int((((1)/(x))),(1),(2))');
 seq('pow in frac den', ['frac(', '1', ',', 'x', '^{}', '2'], '((1)/(((x)^(2))))', { cur: 'root>frac@0.s1>pow@1.s0:1' });
 
 /* ---- parentheses ---- */
-seq('stray close at root', [')'], '', { accepted: '0' });
-seq('extra close after sqrt', ['sqrt(', '2', ')', ')'], 'sqrt((2))', { accepted: '1110' });
+seq('stray close at root', [')'], '\u0000)', { accepted: '1', cur: 'root:1', tex: ')' });
+seq('extra close after sqrt', ['sqrt(', '2', 'R', ')'], 'sqrt((2))\u0000)', { accepted: '1111', tex: '\\sqrt{2})' });
 seq('group times var', ['(', '1', '+', '2', ')', 'x'], '((1+2)*x)');
 seq('open unclosed', ['2', '('], '(2*(\u0000))', { texHas: ['ghost-paren'] });
 seq('open then del', ['(', 'DEL'], '');
@@ -243,7 +243,7 @@ seq('unknown token', ['alpha'], '', { accepted: '0' });
 })();
 
 /* ---- the nine old bugs, at kernel level ---- */
-seq('bug1 sqrt closes', ['sqrt(', '2', ')', '+', '1'], 'sqrt((2))+1', { cur: 'root:3' });
+seq('bug1 sqrt closes', ['sqrt(', '2', 'R', '+', '1'], 'sqrt((2))+1', { cur: 'root:3' });
 (function () { EC.setKey('t'); EC.clearAll(); eq(EC.serialize(), '', 'bug2 empty tree serializes to empty'); EC.setKey(null); })();
 seq('bug3/4 pow del', ['2', '^{}', '3', 'DEL', 'DEL'], '2');
 seq('bug5 int del + comma', ['int(', 'x', ',', '0', ',', '1', 'DEL', 'DEL', 'DEL', 'DEL', 'DEL', 'DEL'], '', { accepted: '111111111111' });
@@ -252,6 +252,174 @@ seq('bug6 x2', ['x', '2'], '(x*2)');
 // bug7 is covered in host integration above
 eq(EC.keyToInput('q'), null, 'bug8 stray letter');
 seq('bug9 unknown append', ['alpha'], '', { accepted: '0' });
+
+/* ---- K1: stray right bracket (xclose) ---- */
+var MJ = require('../www/math.min.js');
+function parses(code) { try { MJ.parse(code); return true; } catch (err) { return false; } }
+seq('xclose sqrt', ['sqrt(', '8', ')'], 'sqrt((8\u0000)))', { cur: 'root>sqrt@0.s0:2', tex: '\\sqrt{8)}', accepted: '111' });
+(function () {
+  seq('xclose sqrt render', ['sqrt(', '8', ')'], 'sqrt((8\u0000)))');
+  EC.setKey('t');
+  ok(EC.renderTex({ cursor: false }).indexOf('\\sqrt{8)}') >= 0, 'xclose: tex contains \\sqrt{8)}');
+  ok(!parses(EC.serialize()), 'xclose: serialization is not math.parse-able');
+  eq(EC.ed('t').root[0].s[0][1].t, 'xclose', 'xclose: item type');
+  EC.setKey(null);
+})();
+seq('xclose twice', ['sqrt(', '8', ')', ')'], 'sqrt((8\u0000)\u0000)))', { cur: 'root>sqrt@0.s0:3', tex: '\\sqrt{8))}', accepted: '1111' });
+(function () { seq('xclose twice parse', ['sqrt(', '8', ')', ')'], 'sqrt((8\u0000)\u0000)))'); EC.setKey('t'); ok(!parses(EC.serialize()), 'xclose twice: not parse-able'); EC.setKey(null); })();
+seq('xclose frac num', ['frac(', '1', ')', ',', '2'], '((1\u0000))/(2))', { tex: '\\frac{1)}{2}' });
+seq('xclose del whole item', ['sqrt(', '8', ')', 'DEL'], 'sqrt((8))', { cur: 'root>sqrt@0.s0:1', tex: '\\sqrt{8}' });
+seq('xclose del twice', ['sqrt(', '8', ')', ')', 'DEL', 'DEL', ')'], 'sqrt((8\u0000)))', { cur: 'root>sqrt@0.s0:2' });
+seq('xclose move over', ['sqrt(', '8', ')', 'L', 'L', 'R', 'R'], 'sqrt((8\u0000)))', { cur: 'root>sqrt@0.s0:2' });
+// kept behaviour
+seq('paren close normal', ['(', '1', '+', '2', ')'], '(1+2)', { cur: 'root:5', tex: '\\left(1+2\\right)' });
+(function () { seq('paren close parse', ['(', '1', '+', '2', ')'], '(1+2)'); EC.setKey('t'); ok(parses(EC.serialize()), 'paren close: parse-able'); EC.setKey(null); })();
+seq('paren close in sqrt', ['sqrt(', '(', '1', ')', '+', '2'], 'sqrt(((1)+2))', { cur: 'root>sqrt@0.s0:5' });
+seq('close skip right', ['(', '1', ')', 'L', ')'], '(1)', { cur: 'root:3', accepted: '11111' });
+seq('close skip right in sqrt', ['sqrt(', '(', '1', ')', 'L', ')'], 'sqrt(((1)))', { cur: 'root>sqrt@0.s0:3' });
+seq('root stray close', ['1', ')'], '1\u0000)', { cur: 'root:2', accepted: '11' });
+seq('comma unchanged frac', ['frac(', '1', ',', '2', ','], '((1)/(2))', { cur: 'root:1' });
+seq('comma unchanged in sqrt', ['sqrt(', '2', ','], 'sqrt((2))', { cur: 'root>sqrt@0.s0:1', accepted: '110' });
+
+/* ---- K1: anchors / setCursorPath / cursorPositions ---- */
+(function () {
+  var base = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '__anchors-baseline.json'), 'utf8'));
+  ok(base.length >= 20, 'baseline has >= 20 cases');
+  function play(tokens) { EC.setKey('t'); EC.clearAll(); tokens.forEach(function (t) { step(t === 'L' ? 'LL' : t); }); }
+  var allEq = true, roundTrips = 0;
+  base.forEach(function (c, ci) {
+    play(c.seq);
+    var same = EC.renderTex() === c.tex && EC.renderTex({ cursor: true }) === c.texCursor &&
+      EC.renderTex({ cursor: false }) === c.texNoCursor && EC.renderTex({ cursor: true, anchors: false }) === c.texCursor &&
+      EC.renderTex({ cursor: false, anchors: false }) === c.texNoCursor;
+    if (!same) allEq = false;
+    ok(same, 'baseline tex equal #' + ci);
+    var e = EC.ed('t'), here = EC.cursorPath(e), cur0 = e.cur.block, idx0 = e.cur.idx;
+    var pos = EC.cursorPositions('t');
+    ok(pos.indexOf(here) >= 0, 'positions contain cursor #' + ci);
+    var a = EC.renderTex('t', { cursor: true, anchors: true });
+    eq(count(a, 'ec-anchor'), pos.length, 'anchor count #' + ci);
+    // each position has exactly one anchor (TeX order may differ from slot order for int bounds)
+    pos.forEach(function (p) { eq(count(a, '\\htmlId{ec-' + p + '}'), 1, 'anchor once ' + p + ' #' + ci); });
+    pos.forEach(function (p) {
+      ok(EC.setCursorPath('t', p) === true, 'setCursorPath ok ' + p);
+      eq(EC.cursorPath(EC.ed('t')), p, 'round trip #' + ci);
+      roundTrips++;
+    });
+    ok(EC.setCursorPath('t', here) && EC.ed('t').cur.block === cur0 && EC.ed('t').cur.idx === idx0, 'restore #' + ci);
+    var snap = JSON.stringify(EC.ed('t').root), ser = EC.serialize('t');
+    ['', 'root', 'root:-1', 'root:01', 'root:' + (EC.ed('t').root.length + 1), 'x:0', 'root>sqrt@99.s0:0',
+      'root>frac@0.s9:0', 'root>zzz@0.s0:0', 'root:1:2', null, 5].forEach(function (bad) {
+      ok(EC.setCursorPath('t', bad) === false, 'reject bad path ' + JSON.stringify(bad) + ' #' + ci);
+    });
+    ok(EC.ed('t').cur.block === cur0 && EC.ed('t').cur.idx === idx0 && JSON.stringify(EC.ed('t').root) === snap && EC.serialize('t') === ser,
+      'bad paths leave state unchanged #' + ci);
+  });
+  ok(allEq, 'anchors:false output equals baseline (all cases)');
+  ok(roundTrips >= 20, 'round trips >= 20 (' + roundTrips + ')');
+  // positions order equals stepping right from the start
+  play(['frac(', 'sqrt(', '2', 'R', ',', 'x', '^{}', '3', 'R', 'R', '+', '1']);
+  var pos = EC.cursorPositions('t');
+  EC.setCursorPath('t', 'root:0');
+  var walked = [EC.cursorPath(EC.ed('t'))];
+  while (EC.moveCursor('right')) walked.push(EC.cursorPath(EC.ed('t')));
+  eq(walked.join(' '), pos.join(' '), 'cursorPositions order equals moveCursor right walk');
+  eq(EC.cursorPositions('no-such-key').length, 0, 'unknown key: no positions');
+  ok(EC.setCursorPath('no-such-key', 'root:0') === false && !Object.prototype.hasOwnProperty.call(EC.editors, 'no-such-key'), 'unknown key rejected');
+  EC.clearAll();
+  eq(EC.renderTex('t', { cursor: true, anchors: true }), EC.anchorTex('root:0') + EC.CUR_TEX, 'empty editor anchors');
+  eq(EC.anchorTex('root>sqrt@0.s0:1'), '\\htmlId{ec-root>sqrt@0.s0:1}{\\htmlClass{ec-anchor}{\\phantom{|}}}', 'anchor tex format');
+  EC.setKey(null);
+})();
+
+/* ---- K2: root-level stray ')' ---- */
+(function () {
+  function synErr(code) { try { MJ.parse(code); return false; } catch (err) { return err instanceof SyntaxError || /syntax|unexpected|char/i.test(String(err.message)); } }
+  seq('empty then close', [')'], '\u0000)');
+  EC.setKey('t');
+  ok(synErr(EC.serialize()), 'empty expr + ) : "=" (math.parse) raises syntax error');
+  eq(EC.ed('t').root[0].t, 'xclose', 'root ) inserts xclose');
+  EC.setKey(null);
+  seq('root stray close parse', ['1', '+', '2', ')'], '1+2\u0000)');
+  EC.setKey('t'); ok(synErr(EC.serialize()), '1+2) : syntax error'); EC.setKey(null);
+  seq('root stray close del', ['1', ')', 'DEL'], '1', { cur: 'root:1' });
+  seq('root paired close kept', ['(', '1', ')', ')'], '(1)\u0000)', { cur: 'root:4', accepted: '1111' });
+})();
+
+/* ---- K2: logb node ---- */
+eq(EC.NODE_SLOTS.logb, 2, 'logb has 2 slots');
+seq('logb', ['log_(', '8', ',', '2'], 'log((8),(2))', { cur: 'root>logb@0.s1:1', tex: '\\log_{2}\\left(8\\right)' });
+(function () {
+  seq('logb eval', ['log_(', '8', ',', '2'], 'log((8),(2))');
+  EC.setKey('t');
+  var v = MJ.evaluate(EC.serialize());
+  ok(Math.abs(v - 3) < 1e-12, 'logb log_2(8) evaluates to 3, got ' + v);
+  EC.setKey(null);
+  seq('logb empty', ['log_('], 'log((\u0000),(\u0000))', { cur: 'root>logb@0.s0:0', tex: '\\log_{\\square}\\left(\\square\\right)' });
+  EC.setKey('t');
+  var sr = EC.serialize();
+  ok(sr.indexOf('\u0000') >= 0 && !parses(sr), 'logb empty slots: has EMPTY_MARK and not parse-able');
+  EC.setKey(null);
+  seq('logb base empty', ['log_(', '8'], 'log((8),(\u0000))');
+  EC.setKey('t'); ok(!parses(EC.serialize()), 'logb empty base not parse-able'); EC.setKey(null);
+})();
+seq('logb comma out', ['log_(', '8', ',', '2', ',', '+', '1'], 'log((8),(2))+1', { cur: 'root:3' });
+seq('logb pow base', ['log_(', '8', ',', '2', ',', '^{}', '2'], '((log((8),(2)))^(2))',
+  { tex: '{\\left(\\log_{2}\\left(8\\right)\\right)}^{2}' });
+seq('logb square', ['log_(', '8', ',', '2', ',', '^{2}'], '((log((8),(2)))^(2))', { texHas: ['\\left(\\log_{2}\\left(8\\right)\\right)}^{2}'] });
+seq('logb times digit', ['2', 'log_(', 'x', ',', '3'], '(2*log((x),(3)))');
+seq('logb nested sqrt', ['log_(', 'sqrt(', 'x', 'R', ',', 'b'], 'log((sqrt((x))),(b))', { tex: '\\log_{b}\\left(\\sqrt{x}\\right)' });
+seq('logb xclose in arg', ['log_(', '8', ')'], 'log((8\u0000)),(\u0000))', { cur: 'root>logb@0.s0:2' });
+// DEL
+seq('logb del empty from arg', ['log_(', 'DEL'], '', { cur: 'root:0' });
+seq('logb del empty from outside', ['log_(', ',', ',', 'DEL'], '', { cur: 'root:0' });
+seq('logb del empty from base', ['log_(', ',', 'DEL'], '', { cur: 'root:0' });
+seq('logb del enters base', ['log_(', '8', ',', '2', ',', 'DEL'], 'log((8),(2))', { cur: 'root>logb@0.s1:1' });
+seq('logb del enters arg', ['log_(', '8', ',', ',', 'DEL'], 'log((8),(\u0000))', { cur: 'root>logb@0.s0:1' });
+seq('logb del base start to arg', ['log_(', '8', ',', 'DEL'], 'log((8),(\u0000))', { cur: 'root>logb@0.s0:1' });
+seq('logb del unwrap arg', ['1', '+', 'log_(', 'x', 'L', 'DEL'], '1+x', { cur: 'root:2' });
+seq('logb move', ['log_(', '8', ',', '2', 'L', 'L', 'L', 'L', 'R'], 'log((8),(2))', { cur: 'root>logb@0.s0:0' });
+(function () {
+  seq('logb anchors', ['log_(', '8', ',', '2'], 'log((8),(2))');
+  var pos = EC.cursorPositions('t');
+  eq(pos.join(' '), 'root:0 root>logb@0.s0:0 root>logb@0.s0:1 root>logb@0.s1:0 root>logb@0.s1:1 root:1', 'logb cursorPositions');
+  ok(EC.setCursorPath('t', 'root>logb@0.s1:0') && EC.cursorPath(EC.ed('t')) === 'root>logb@0.s1:0', 'logb setCursorPath');
+  ok(EC.setCursorPath('t', 'root>logb@0.s2:0') === false, 'logb slot 2 rejected');
+  eq(count(EC.renderTex('t', { anchors: true }), 'ec-anchor'), 6, 'logb anchor count');
+  EC.setKey(null);
+})();
+// log10 untouched
+seq('log10 kept', ['log10(', '1', '0', '0', ')'], 'log10(100)', { tex: '\\lg\\left(100\\right)' });
+seq('log fn kept', ['log(', 'x', ')'], 'log(x)', { tex: '\\ln\\left(x\\right)' });
+
+/* ---- K2: variable t ---- */
+seq('var t', ['t'], 't', { cur: 'root:1', tex: 't' });
+seq('var t product', ['2', 't', '+', 't', '^{2}'], '(2*t)+((t)^(2))');
+(function () {
+  seq('var t eval', ['2', 't', '+', '1'], '(2*t)+1');
+  EC.setKey('t'); eq(MJ.evaluate(EC.serialize(), { t: 4 }), 9, 't evaluates with scope'); EC.setKey(null);
+})();
+seq('tan not t', ['tan(', 'x', ')'], 'tan(x)', { tex: '\\tan\\left(x\\right)' });
+seq('t a n letters', ['t', 'a', 'n'], '(t*a)', { accepted: '110' });   // 'n' is not a token, t+a never forms tan(
+seq('t then tan', ['t', 'tan(', 't', ')'], '(t*tan(t))');
+(function () {
+  eq(EC.keyToInput('t'), 't', 'keyToInput t');
+  ok(EC.keyToInput('tan(') === null && EC.keyToInput('T') === null, 'keyToInput: no tan( / T');
+  ok(EC.append === EC.append && Object.prototype.hasOwnProperty.call(EC.editors, 'var_t'), 'var_t editor exists');
+  ['a', 'b', 'c', 'x', 'y', 'z'].forEach(function (k) {
+    eq(EC.keyToInput(k), k, 'keyToInput ' + k + ' unchanged');
+    ok(Object.prototype.hasOwnProperty.call(EC.editors, 'var_' + k), 'var_' + k + ' exists');
+    seq('var ' + k + ' unchanged', [k, '+', '1'], k + '+1', { tex: k + '+1' });
+  });
+  ['var_a', 'var_b', 'var_c', 'var_x', 'var_y', 'var_z', 'var_t'].forEach(function (k) { EC.setKey(k); EC.clearAll(); });
+  EC.setKey('var_t'); EC.append('5'); EC.append('t');
+  EC.setKey('var_x'); EC.append('7');
+  eq(EC.serialize('var_t'), '(5*t)', 'var_t content');
+  eq(EC.serialize('var_x'), '7', 'var_x independent of var_t');
+  ['var_a', 'var_b', 'var_c', 'var_y', 'var_z'].forEach(function (k) { ok(EC.isEmpty(k), k + ' untouched by var_t'); });
+  ['var_x', 'var_t'].forEach(function (k) { EC.setKey(k); EC.clearAll(); });
+  EC.setKey(null);
+})();
 
 /* ---- module hygiene ---- */
 (function () {

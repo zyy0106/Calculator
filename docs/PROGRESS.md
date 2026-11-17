@@ -85,3 +85,28 @@ S3 / S4 / S5 改同一个文件，必须串行。S1 与 S2 互不相干，可并
 - 含中文的文件一律用 `exec_command` + PowerShell here-string + `Set-Content -Encoding UTF8` 写（`js` 工具会拒绝源码里的全角标点）。
 
 
+---
+
+## v2 步骤表 rev2（2026-11-17；任务卡见 `C:\Users\28233\Documents\ChatGPT\WebCASIO\docs\PLAN-v2.md`）
+
+| 步骤 | 内容 | 需求 | 写入路径 | 依赖 | rho | 状态 |
+|---|---|---|---|---|---|---|
+| K1 | 游离右括号 xclose + 触点锚点/setCursorPath | R1,R3 | `tools\editor-core.js`、`.test.js` | — | 0.424 | DONE（单测 3660 pass / 0 fail） |
+| K2 | logb 节点 + 变量 t + 根层 `)` 修正 | R4,R5 | `tools\editor-core.js`、`.test.js` | K1 | 0.441 | DONE（单测 4788 pass / 0 fail） |
+| S1 | 含参变限积分方程求解内核 | R5 | `tools\inteq-solver.js`、`.test.js` | — | 0.441 | DONE（28/28 pass；I4b 需下调默认 steps/n，见 PLAN-v2 第 10 节） |
+| I1 | K1+K2 内核内联同步 + 变量 t 宿主接线 | R1,R3,R4 | `www\index.html` | K1,K2 | 0.436 | DONE（suite 153/153；内联段 881-1482；64 函数一致） |
+| I2 | 6 列键盘 + 半宽括号 + 长按反函数/ln/t | R4 | `www\index.html` | I1 | 0.386 | DONE（i2 40/40；含内核 K3 补丁 asin/acos/atan，双副本同步） |
+| I3 | 公式区自动右滚 | R2 | `www\index.html` | I2 | 0.402 | DONE（i3 13/13；scrollCursorIntoView，开关 __ec_autoscroll_enabled） |
+| I4 | 触摸点击定位光标（250ms/10px） | R3 | `www\index.html` | I3,K1 | 0.424 | DONE（i4 16/16；TAP_MAX_MS=250/TAP_MAX_PX=10；i3 已修正为 13/13） |
+| I4b | 积分方程 UI 接线 | R5 | `www\index.html` | I4,S1 | 0.430 | DONE（i4b 21/21；内联 S1 在 1526-1726；默认 steps=400,n=64，耗时 3-19ms） |
+| I5 | 回归扩充 + android 同步 + 验收报告 | 全部 | `tools\suite-v2.js`、`docs\v2验收报告.md`、android 副本 | I4b | 0.447 | DONE（suite-v2 133/133；suite.js 5×153/153；android 副本字节/逐行一致；见 v2验收报告.md） |
+
+容量：H=150000、B=112500、F=24000、u=1.25（W=200000/p=75 为情景假设，未实测）。
+并行：K1→K2 串行（同文件）；S1 与 K 系列并行。I1→I2→I3→I4→I4b→I5 共写 `www\index.html`，严格串行，前一步未写 `docs\CHECKPOINT-*.md` 不得启动下一步。
+
+
+### K3 补丁（2026-11-17，主对话本地执行，非子任务）
+- 背景：I2 发现内核 `FN_INPUT`/`FN_TEX` 无 asin/acos/atan，sin/cos/tan 长按反函数被 `append` 丢弃。属成对内核改动，2 行 × 2 文件，主对话直接改以免阻塞关键路径。
+- 改动：`tools\editor-core.js` 34-35 行与 `www\index.html` 934-935 行，各加 `asin/acos/atan` 的 `FN_INPUT` 映射与 `\sin^{-1}`/`\cos^{-1}`/`\tan^{-1}` 的 `FN_TEX`。两文件同步。
+- 验证：`--selftest` OK；单测 4788 pass/0 fail（未变，因新映射无旧断言覆盖，I2 的 i2.js 覆盖）；`node tools\suite.js` 153/153 pageErrors=0；`i2.js` 40/40 pageErrors=0。
+- 编码：editor-core.js 仍 LF 纯 ASCII；index.html 仍 CRLF 无 BOM。

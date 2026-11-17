@@ -25,15 +25,17 @@
   var SQ_CUR_TEX = '\\htmlClass{cursor-blink}{\\square}';
   var GHOST_CLOSE_TEX = '\\right.\\htmlClass{ghost-paren}{)}';
   var BASE_MISSING_TEX = '\\htmlClass{base-missing}{\\square}';
+  var XCLOSE_TEX = ')';   // stray right bracket (no matching open): rendered bare
+  function anchorTex(path) { return '\\htmlId{ec-' + path + '}{\\htmlClass{ec-anchor}{\\phantom{|}}}'; }
 
-  var NODE_SLOTS = { frac: 2, sqrt: 1, int: 3, deriv: 2, pow: 1, sci: 1 };
+  var NODE_SLOTS = { frac: 2, sqrt: 1, int: 3, deriv: 2, pow: 1, sci: 1, logb: 2 };   // logb: s0 argument, s1 base
   // node types whose rendering needs \left( \right) when used as a power base
-  var PW_TYPES = { frac: true, pow: true, sci: true, int: true, deriv: true };
-  var FN_INPUT = { 'sin(': 'sin', 'cos(': 'cos', 'tan(': 'tan', 'log10(': 'log10', 'log(': 'log', 'f(': 'f', 'g(': 'g' };
-  var FN_TEX = { '': '', sin: '\\sin', cos: '\\cos', tan: '\\tan', log10: '\\lg', log: '\\ln', f: 'f', g: 'g' };
-  var NODE_INPUT = { 'sqrt(': 'sqrt', 'frac(': 'frac', 'int(': 'int', 'deriv(': 'deriv' };
+  var PW_TYPES = { frac: true, pow: true, sci: true, int: true, deriv: true, logb: true };
+  var FN_INPUT = { 'sin(': 'sin', 'cos(': 'cos', 'tan(': 'tan', 'asin(': 'asin', 'acos(': 'acos', 'atan(': 'atan', 'log10(': 'log10', 'log(': 'log', 'f(': 'f', 'g(': 'g' };
+  var FN_TEX = { '': '', sin: '\\sin', cos: '\\cos', tan: '\\tan', asin: '\\sin^{-1}', acos: '\\cos^{-1}', atan: '\\tan^{-1}', log10: '\\lg', log: '\\ln', f: 'f', g: 'g' };
+  var NODE_INPUT = { 'sqrt(': 'sqrt', 'frac(': 'frac', 'int(': 'int', 'deriv(': 'deriv', 'log_(': 'logb' };
   var OP_TEX = { '+': '+', '-': '-', '*': '\\times ', '/': '\\div ' };
-  var VARS = { a: 1, b: 1, c: 1, x: 1, y: 1, z: 1 };
+  var VARS = { a: 1, b: 1, c: 1, x: 1, y: 1, z: 1, t: 1 };
 
   function has(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
 
@@ -79,7 +81,7 @@
 
   var editors = {};
   ['main', 'fx', 'gx'].forEach(function (k) { editors[k] = newEditor(); });
-  ['a', 'b', 'c', 'x', 'y', 'z'].forEach(function (k) { editors['var_' + k] = newEditor(); });
+  ['a', 'b', 'c', 'x', 'y', 'z', 't'].forEach(function (k) { editors['var_' + k] = newEditor(); });
 
   /* ---------------- host integration ---------------- */
   function defaultGetKey() {
@@ -218,6 +220,7 @@
       else if (it.t === 'const') add('operand', constSer(it.id));
       else if (it.t === 'open') stack.push({ fn: it.fn, parts: [] });
       else if (it.t === 'close') { if (stack.length > 1) closeFrame(); }
+      else if (it.t === 'xclose') add('op', EMPTY_MARK + ')');   // stray ')': always a syntax error
       else if (it.t === 'pow' || it.t === 'sci') {
         var base = takeBase(top().parts);
         var expCode = serSlot(it.s[0]);
@@ -235,6 +238,7 @@
     if (n.t === 'frac') return '((' + serSlot(n.s[0]) + ')/(' + serSlot(n.s[1]) + '))';
     if (n.t === 'sqrt') return 'sqrt((' + serSlot(n.s[0]) + '))';
     if (n.t === 'int') return 'int((' + serSlot(n.s[0]) + '),(' + serSlot(n.s[1]) + '),(' + serSlot(n.s[2]) + '))';
+    if (n.t === 'logb') return 'log((' + serSlot(n.s[0]) + '),(' + serSlot(n.s[1]) + '))';
     if (n.t === 'deriv') return 'deriv((' + serSlot(n.s[0]) + '),(' + serSlot(n.s[1]) + '))';
     return EMPTY_MARK;
   }
@@ -281,24 +285,28 @@
     }
     return out;
   }
-  function texSlot(b, cur) {
-    if (b.length === 0) return (cur && cur.block === b) ? SQ_CUR_TEX : SQ_TEX;
-    return texBlock(b, cur);
+  // ctx (anchors only): { path: '<block path>' }, same format as cursorPath without ':idx'
+  function childCtx(ctx, n, i, si) { return ctx ? { path: ctx.path + '>' + n.t + '@' + i + '.s' + si } : null; }
+  function texSlot(b, cur, ctx) {
+    if (b.length === 0) return (ctx ? anchorTex(ctx.path + ':0') : '') + ((cur && cur.block === b) ? SQ_CUR_TEX : SQ_TEX);
+    return texBlock(b, cur, ctx);
   }
-  function texNode(n, cur) {
-    if (n.t === 'frac') return '\\frac{' + texSlot(n.s[0], cur) + '}{' + texSlot(n.s[1], cur) + '}';
-    if (n.t === 'sqrt') return '\\sqrt{' + texSlot(n.s[0], cur) + '}';
+  function texNode(n, cur, ctx, ni) {
+    function sl(k) { return texSlot(n.s[k], cur, childCtx(ctx, n, ni, k)); }
+    if (n.t === 'frac') return '\\frac{' + sl(0) + '}{' + sl(1) + '}';
+    if (n.t === 'sqrt') return '\\sqrt{' + sl(0) + '}';
     if (n.t === 'int') {
-      return '\\int_{' + texSlot(n.s[1], cur) + '}^{' + texSlot(n.s[2], cur) + '} ' +
-        texSlot(n.s[0], cur) + '\\,\\mathrm{d}x';
+      return '\\int_{' + sl(1) + '}^{' + sl(2) + '} ' +
+        sl(0) + '\\,\\mathrm{d}x';
     }
+    if (n.t === 'logb') return '\\log_{' + sl(1) + '}\\left(' + sl(0) + '\\right)';
     if (n.t === 'deriv') {
-      return '\\left.\\frac{\\mathrm{d}}{\\mathrm{d}x}\\left(' + texSlot(n.s[0], cur) +
-        '\\right)\\right|_{x=' + texSlot(n.s[1], cur) + '}';
+      return '\\left.\\frac{\\mathrm{d}}{\\mathrm{d}x}\\left(' + sl(0) +
+        '\\right)\\right|_{x=' + sl(1) + '}';
     }
     return SQ_TEX;
   }
-  function texBlock(block, cur) {
+  function texBlock(block, cur, ctx) {
     var hasCur = !!(cur && cur.block === block);
     var stack = [{ fn: '', parts: [] }];
     function top() { return stack[stack.length - 1]; }
@@ -311,6 +319,7 @@
       add('operand', fnt + '\\left(' + body + (closed ? '\\right)' : GHOST_CLOSE_TEX), false);
     }
     for (var i = 0; i <= block.length; i++) {
+      if (ctx) add('cursor', anchorTex(ctx.path + ':' + i));
       if (hasCur && cur.idx === i) add('cursor', CUR_TEX);
       if (i === block.length) break;
       var it = block[i];
@@ -321,9 +330,10 @@
       else if (it.t === 'const') add('operand', '\\htmlClass{const-sym}{' + constTex(it.id) + '}');
       else if (it.t === 'open') stack.push({ fn: it.fn, parts: [] });
       else if (it.t === 'close') { if (stack.length > 1) closeFrame(true); }
+      else if (it.t === 'xclose') add('op', XCLOSE_TEX);
       else if (it.t === 'pow' || it.t === 'sci') {
         var base = takeBase(top().parts);
-        var ex = texSlot(it.s[0], cur);
+        var ex = texSlot(it.s[0], cur, childCtx(ctx, it, i, 0));
         var s;
         if (base) {
           var bs = '{' + (base.pw ? '\\left(' + base.s + '\\right)' : base.s) + base.trail + '}';
@@ -333,7 +343,7 @@
         }
         add('operand', s, true);
       } else if (isNode(it)) {
-        add('operand', texNode(it, cur), !!PW_TYPES[it.t], it.t === 'frac');
+        add('operand', texNode(it, cur, ctx, i), !!PW_TYPES[it.t], it.t === 'frac');
       }
     }
     while (stack.length > 1) closeFrame(false);
@@ -344,8 +354,9 @@
     opts = opts || {};
     var e = ed(key);
     var cur = opts.cursor === false ? null : e.cur;
-    if (e.root.length === 0) return cur ? CUR_TEX : '';
-    return texBlock(e.root, cur);
+    var ctx = opts.anchors ? { path: 'root' } : null;
+    if (e.root.length === 0) return (ctx ? anchorTex('root:0') : '') + (cur ? CUR_TEX : '');
+    return texBlock(e.root, cur, ctx);
   }
 
   /* ---------------- editing ---------------- */
@@ -409,9 +420,8 @@
     var b = e.cur.block, i = e.cur.idx;
     if (pendingOpenIdx(b, i) !== -1) { insertItem(e, { t: 'close' }); return true; }
     if (i < b.length && b[i].t === 'close') { e.cur.idx = i + 1; return true; }
-    var p = findParent(e.root, b);
-    if (p) { e.cur.block = p.parentBlock; e.cur.idx = p.nodeIdx + 1; return true; }
-    return false;
+    insertItem(e, { t: 'xclose' });   // nothing to pair with (any level): stray ')'
+    return true;
   }
 
   function doDelete(e) {
@@ -506,7 +516,7 @@
   function keyToInput(key) {
     if (typeof key !== 'string') return null;
     if (key === '^') return '^{}';
-    if (/^[abcxyze0-9.+\-*\/(),]$/.test(key)) return key;
+    if (/^[abcxyzte0-9.+\-*\/(),]$/.test(key)) return key;
     return null;
   }
   function cursorPath(e) {
@@ -520,6 +530,53 @@
     }
     return ['root'].concat(chain).join('>') + ':' + e.cur.idx;
   }
+  // resolve 'root>sqrt@0.s0:1' to { block, idx } in editor e, or null when invalid
+  function resolvePath(e, path) {
+    if (typeof path !== 'string') return null;
+    var m = /^(.*):(0|[1-9][0-9]*)$/.exec(path);
+    if (!m) return null;
+    var segs = m[1].split('>');
+    if (segs[0] !== 'root') return null;
+    var b = e.root;
+    for (var i = 1; i < segs.length; i++) {
+      var sm = /^([a-z]+)@(0|[1-9][0-9]*)\.s(0|[1-9][0-9]*)$/.exec(segs[i]);
+      if (!sm) return null;
+      var n = b[Number(sm[2])], si = Number(sm[3]);
+      if (!isNode(n) || n.t !== sm[1] || si >= n.s.length) return null;
+      b = n.s[si];
+    }
+    var idx = Number(m[2]);
+    return idx <= b.length ? { block: b, idx: idx } : null;
+  }
+  function existingKey(key) {
+    var k = (key === undefined || key === null) ? activeEditorKey() : String(key);
+    return has(editors, k) ? k : null;
+  }
+  // move the cursor to a path from cursorPath/cursorPositions; invalid path: false, no state change
+  function setCursorPath(key, path) {
+    var k = existingKey(key);
+    if (k === null) return false;
+    var e = editors[k], r = resolvePath(e, path);
+    if (!r) return false;
+    e.cur.block = r.block;
+    e.cur.idx = r.idx;
+    notify(k);
+    return true;
+  }
+  // all legal cursor paths, left to right (slot order, same as stepping moveCursor right)
+  function cursorPositions(key) {
+    var k = existingKey(key), out = [];
+    if (k === null) return out;
+    (function walk(b, path) {
+      for (var i = 0; i <= b.length; i++) {
+        out.push(path + ':' + i);
+        if (i < b.length && isNode(b[i])) {
+          for (var si = 0; si < b[i].s.length; si++) walk(b[i].s[si], path + '>' + b[i].t + '@' + i + '.s' + si);
+        }
+      }
+    })(editors[k].root, 'root');
+    return out;
+  }
   function __dbg(key) {
     var k = key || activeEditorKey();
     var e = ed(k);
@@ -531,6 +588,7 @@
     append: append, deleteLast: deleteLast, moveCursor: moveCursor, clearAll: clearAll,
     renderTex: renderTex, serialize: serialize, isEmpty: isEmpty, cursorToEnd: cursorToEnd,
     keyToInput: keyToInput, configure: configure, setKey: setKey,
+    setCursorPath: setCursorPath, cursorPositions: cursorPositions, cursorPath: cursorPath,
     editors: editors, activeEditorKey: activeEditorKey, ed: ed, __dbg: __dbg,
     // internals (exported for tests and later steps)
     EMPTY_MARK: EMPTY_MARK, CUR_TEX: CUR_TEX, SQ_TEX: SQ_TEX, SQ_CUR_TEX: SQ_CUR_TEX,
@@ -539,7 +597,7 @@
     blockEmpty: blockEmpty, allSlotsEmpty: allSlotsEmpty, takeBase: takeBase,
     serBlock: serBlock, serSlot: serSlot, serNode: serNode, joinParts: joinParts,
     serializeRoot: serializeRoot, texBlock: texBlock, texSlot: texSlot, texNode: texNode,
-    joinTex: joinTex
+    joinTex: joinTex, anchorTex: anchorTex, resolvePath: resolvePath
   };
 });
 
