@@ -388,7 +388,7 @@
     if (v === '(') { insertItem(e, { t: 'open', fn: '' }); return true; }
     if (has(FN_INPUT, v)) { insertItem(e, { t: 'open', fn: FN_INPUT[v] }); return true; }
     if (has(NODE_INPUT, v)) { insertNode(e, makeNode(NODE_INPUT[v]), 0); return true; }
-    if (v === '^{}') { insertNode(e, makeNode('pow'), 0); return true; }
+    if (v === '^{}' || v === '^') { insertNode(e, makeNode('pow'), 0); return true; }   // raw '^' = '^{}' (was silently rejected: 7^^8 -> 78)
     if (v === '*10^{}') { insertNode(e, makeNode('sci'), 0); return true; }
     if (v === '^{2}') {
       var sq = makeNode('pow');
@@ -496,6 +496,90 @@
     return true;
   }
 
+  /* ---------------- syntax validation (kernel level, independent of mathjs) ----------------
+     validate(key) -> { ok: true } | { ok: false, code, message, pos, path }
+     pos: index in the root block of the offending item (or of the top-level node containing it);
+     path: cursor path right after the offending item / inside the empty slot or brackets. */
+  var VALIDATE_MSG = {
+    EMPTY: 'Expression is empty',
+    OP_CONSECUTIVE: 'Two operators in a row',
+    OP_LEADING: 'Expression cannot start with this operator',
+    OP_TRAILING: 'Operator is missing its right operand',
+    DOT_DOUBLE: 'Consecutive decimal points',
+    DOT_MULTIPLE: 'More than one decimal point in a number',
+    DOT_ALONE: 'Decimal point without digits',
+    STRAY_CLOSE: 'Right bracket has no matching left bracket',
+    EMPTY_PARENS: 'Empty brackets',
+    FN_NO_ARG: 'Function is missing its argument',
+    EMPTY_SLOT: 'A required box is empty',
+    POW_NO_BASE: 'Power has no base'
+  };
+  // item: index of the offending item in its block; at: cursor index for path
+  function vErr(code, path, item, at, rootIdx) {
+    return { ok: false, code: code, message: VALIDATE_MSG[code], pos: rootIdx === null ? item : rootIdx, path: path + ':' + at };
+  }
+  // every slot of every node is required (an empty slot serializes to EMPTY_MARK)
+  function validateSlots(n, path, i, rootIdx) {
+    for (var si = 0; si < n.s.length; si++) {
+      var r = validateBlock(n.s[si], path + '>' + n.t + '@' + i + '.s' + si, rootIdx === null ? i : rootIdx);
+      if (r) return r;
+    }
+    return null;
+  }
+  // mirrors serBlock's frame/operand model; a block (root or slot) or bracket is an expression start,
+  // where a single unary + or - is allowed. Returns null when valid, else an error object.
+  function validateBlock(b, path, rootIdx) {
+    var stack = [{ fn: null, n: 0, last: null, lastIdx: -1, openIdx: -1 }];
+    function top() { return stack[stack.length - 1]; }
+    function operand() { var f = top(); f.n++; f.last = 'N'; }
+    function endFrame(f) {
+      if (f.n === 0) return vErr(f.fn === '' ? 'EMPTY_PARENS' : 'FN_NO_ARG', path, f.openIdx, f.openIdx + 1, rootIdx);
+      if (f.last === 'O') return vErr('OP_TRAILING', path, f.lastIdx, f.lastIdx + 1, rootIdx);
+      return null;
+    }
+    var r, f;
+    for (var i = 0; i < b.length; i++) {
+      var it = b[i];
+      if (it.t === 'd') {
+        var j = i, s = '';
+        while (j < b.length && b[j].t === 'd') { s += b[j].v; j++; }
+        if (s.indexOf('..') >= 0) return vErr('DOT_DOUBLE', path, i + s.indexOf('..') + 1, i + s.indexOf('..') + 2, rootIdx);
+        if (s.indexOf('.') !== s.lastIndexOf('.')) return vErr('DOT_MULTIPLE', path, i + s.lastIndexOf('.'), i + s.lastIndexOf('.') + 1, rootIdx);
+        if (!/[0-9]/.test(s)) return vErr('DOT_ALONE', path, i, j, rootIdx);
+        operand();
+        i = j - 1;
+      } else if (it.t === 'op') {
+        f = top();
+        if (f.last === 'O') return vErr('OP_CONSECUTIVE', path, i, i + 1, rootIdx);
+        if (f.n === 0 && it.v !== '+' && it.v !== '-') return vErr('OP_LEADING', path, i, i + 1, rootIdx);
+        f.n++; f.last = 'O'; f.lastIdx = i;
+      } else if (it.t === 'var' || it.t === 'ans' || it.t === 'const') operand();
+      else if (it.t === 'open') stack.push({ fn: it.fn, n: 0, last: null, lastIdx: -1, openIdx: i });
+      else if (it.t === 'close') {
+        if (stack.length < 2) return vErr('STRAY_CLOSE', path, i, i + 1, rootIdx);
+        r = endFrame(stack.pop());
+        if (r) return r;
+        operand();
+      } else if (it.t === 'xclose') return vErr('STRAY_CLOSE', path, i, i + 1, rootIdx);
+      else if (isNode(it)) {
+        if (it.t === 'pow' && top().last !== 'N') return vErr('POW_NO_BASE', path, i, i, rootIdx);
+        r = validateSlots(it, path, i, rootIdx);
+        if (r) return r;
+        operand();
+      }
+    }
+    while (stack.length > 1) {   // unclosed brackets are closed implicitly (never an error by themselves)
+      r = endFrame(stack.pop());
+      if (r) return r;
+      operand();
+    }
+    f = stack[0];
+    if (f.n === 0) return vErr(rootIdx === null ? 'EMPTY' : 'EMPTY_SLOT', path, 0, 0, rootIdx);
+    if (f.last === 'O') return vErr('OP_TRAILING', path, f.lastIdx, f.lastIdx + 1, rootIdx);
+    return null;
+  }
+  function validate(key) { return validateBlock(ed(key).root, 'root', null) || { ok: true }; }
+
   /* ---------------- public API ---------------- */
   function append(v) { var k = activeEditorKey(); var r = doAppend(editors[k], v); notify(k); return r; }
   function deleteLast() { var k = activeEditorKey(); var r = doDelete(editors[k]); notify(k); return r; }
@@ -590,7 +674,7 @@
   return {
     // public editor API
     append: append, deleteLast: deleteLast, moveCursor: moveCursor, clearAll: clearAll,
-    renderTex: renderTex, serialize: serialize, isEmpty: isEmpty, cursorToEnd: cursorToEnd,
+    renderTex: renderTex, serialize: serialize, validate: validate, isEmpty: isEmpty, cursorToEnd: cursorToEnd,
     keyToInput: keyToInput, configure: configure, setKey: setKey,
     setCursorPath: setCursorPath, cursorPositions: cursorPositions, cursorPath: cursorPath,
     editors: editors, activeEditorKey: activeEditorKey, ed: ed, __dbg: __dbg,
@@ -601,7 +685,8 @@
     blockEmpty: blockEmpty, allSlotsEmpty: allSlotsEmpty, takeBase: takeBase,
     serBlock: serBlock, serSlot: serSlot, serNode: serNode, joinParts: joinParts,
     serializeRoot: serializeRoot, texBlock: texBlock, texSlot: texSlot, texNode: texNode,
-    joinTex: joinTex, anchorTex: anchorTex, resolvePath: resolvePath
+    joinTex: joinTex, anchorTex: anchorTex, resolvePath: resolvePath,
+    validateBlock: validateBlock, VALIDATE_MSG: VALIDATE_MSG
   };
 });
 

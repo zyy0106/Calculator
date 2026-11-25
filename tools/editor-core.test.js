@@ -511,6 +511,173 @@ seq('log10 still kept', ['log10(', '1', '0', ')'], 'log10(10)', { tex: '\\lg\\le
 })();
 console.log('K5 new assertions: ' + (pass + fail - k5Start));
 
+/* ---- G1: kernel syntax validation ---- */
+var g1Start = pass + fail;
+(function () {
+  var M = require('../www/math.min.js');
+  function play(tokens) { EC.setKey('t'); EC.clearAll(); tokens.forEach(step); }
+  function parses(code) { try { M.parse(code); return true; } catch (e) { return false; } }
+  function chars(str) { return str.replace(/[^0-9abcxyz]/g, '').split('').sort().join(''); }
+  function subsetOf(a, b) { var j = 0; for (var i = 0; i < b.length && j < a.length; i++) if (b[i] === a[j]) j++; return j === a.length; }
+  // [tokens, wantCode or null (= ok)]
+  function v(name, tokens, want, extra) {
+    play(tokens);
+    var r = EC.validate('t'), ser = EC.serialize('t');
+    eq(r.ok, want === null, 'G1 ' + name + ': ok');
+    if (want !== null) {
+      eq(r.code, want, 'G1 ' + name + ': code');
+      ok(typeof r.message === 'string' && /^[\x20-\x7e]+$/.test(r.message) && r.message === EC.VALIDATE_MSG[r.code], 'G1 ' + name + ': ascii message');
+    } else ok(parses(ser), 'G1 ' + name + ': valid implies mathjs parses ' + JSON.stringify(ser));
+    var ins = chars(tokens.filter(function (t) { return t.length === 1; }).join(''));
+    ok(subsetOf(ins, chars(ser)), 'G1 ' + name + ': chars conserved in ' + JSON.stringify(ser));
+    if (extra) extra(r, ser);
+    EC.setKey(null);
+    return r;
+  }
+  function k(str) { return str.split(''); }
+  // the 18 known sequences (17 from the defect table + 7.5.2 from rule 4)
+  v('7++8', k('7++8'), 'OP_CONSECUTIVE', function (r) { eq(r.pos, 2, 'G1 7++8 pos'); eq(r.path, 'root:3', 'G1 7++8 path'); });
+  v('7--8', k('7--8'), 'OP_CONSECUTIVE');
+  v('7+-8', k('7+-8'), 'OP_CONSECUTIVE');
+  v('7*-8', k('7*-8'), 'OP_CONSECUTIVE');
+  v('--7', k('--7'), 'OP_CONSECUTIVE');
+  v('(+8)', k('(+8)'), null);
+  v('7^^8', k('7^^8'), 'POW_NO_BASE', function (r, ser) {
+    eq(ser, '((7)^(((\u0000)^(8))))', 'G1 7^^8 nested, nothing lost');
+    ok(ser.indexOf('7') >= 0 && ser.indexOf('8') >= 0 && !parses(ser), 'G1 7^^8 keeps 7 and 8, mathjs rejects');
+    eq(r.pos, 1, 'G1 7^^8 pos'); eq(r.path, 'root>pow@1.s0:0', 'G1 7^^8 path');
+  });
+  v('7+()8', k('7+()8'), 'EMPTY_PARENS', function (r) { eq(r.path, 'root:3', 'G1 7+()8 path'); });
+  v('7*/8', k('7*/8'), 'OP_CONSECUTIVE');
+  v('7+*8', k('7+*8'), 'OP_CONSECUTIVE');
+  v('*8', k('*8'), 'OP_LEADING');
+  v('/8', k('/8'), 'OP_LEADING');
+  v('7+', k('7+'), 'OP_TRAILING', function (r) { eq(r.pos, 1, 'G1 7+ pos'); eq(r.path, 'root:2', 'G1 7+ path'); });
+  v('7+8*', k('7+8*'), 'OP_TRAILING');
+  v('7..8', k('7..8'), 'DOT_DOUBLE', function (r) { eq(r.pos, 2, 'G1 7..8 pos'); });
+  v('7+.', k('7+.'), 'DOT_ALONE');
+  v('.', k('.'), 'DOT_ALONE');
+  v('7.5.2', k('7.5.2'), 'DOT_MULTIPLE', function (r) { eq(r.pos, 3, 'G1 7.5.2 pos'); });
+  // raw '^' behaves exactly like '^{}'
+  play(['7', '^', '8']); eq(EC.serialize('t'), '((7)^(8))', 'G1 raw ^ = ^{}'); EC.setKey(null);
+  play(['7', '^{}', '8']); var tA = EC.renderTex('t'); play(['7', '^', '8']); eq(EC.renderTex('t'), tA, 'G1 raw ^ tex = ^{} tex'); EC.setKey(null);
+  play(['7', '^', '^']); ok(EC.ed('t').root.length === 2 && EC.ed('t').root[1].t === 'pow', 'G1 7^^ nests pow'); EC.setKey(null);
+  // rule 1/2: unary sign boundary
+  v('-7', k('-7'), null);
+  v('+7', k('+7'), null);
+  v('(-7)', k('(-7)'), null);
+  v('7+(-8)', k('7+(-8)'), null);
+  v('7*(-8)', k('7*(-8)'), null);
+  v('-(-7)', k('-(-7)'), null);
+  v('-', ['-'], 'OP_TRAILING');
+  v('+', ['+'], 'OP_TRAILING');
+  v('(-)', k('(-)'), 'OP_TRAILING');
+  v('(--7)', k('(--7)'), 'OP_CONSECUTIVE');
+  v('7-+8', k('7-+8'), 'OP_CONSECUTIVE');
+  v('7/-8', k('7/-8'), 'OP_CONSECUTIVE');
+  v('sin(-x', ['sin(', '-', 'x'], null);
+  v('sin(*x', ['sin(', '*', 'x'], 'OP_LEADING');
+  v('frac -1/2', ['frac(', '-', '1', ',', '2'], null);
+  v('frac /1', ['frac(', '/', '1', ',', '2'], 'OP_LEADING');
+  v('2^{-3}', ['2', '^{}', '-', '3'], null);
+  v('2^{--3}', ['2', '^{}', '-', '-', '3'], 'OP_CONSECUTIVE', function (r) { eq(r.pos, 1, 'G1 pos = top-level node'); eq(r.path, 'root>pow@1.s0:2', 'G1 nested path'); });
+  v('sqrt(-4', ['sqrt(', '-', '4'], null);
+  v('7+frac 1/2', ['7', '+', 'frac(', '1', ',', '2'], null);
+  // rule 3
+  v('7-', k('7-'), 'OP_TRAILING');
+  v('(7+', k('(7+'), 'OP_TRAILING');
+  v('(7+)', k('(7+)'), 'OP_TRAILING');
+  v('^8', k('^8'), 'POW_NO_BASE');
+  v('sqrt 7*', ['sqrt(', '7', '*'], 'OP_TRAILING');
+  // rule 4
+  v('.5', k('.5'), null);
+  v('5.', k('5.'), null);
+  v('7+.5', k('7+.5'), null);
+  v('7.x', k('7.x'), null);
+  v('..', k('..'), 'DOT_DOUBLE');
+  v('x.', k('x.'), 'DOT_ALONE');
+  v('1.2.', k('1.2.'), 'DOT_MULTIPLE');
+  v('(.)', k('(.)'), 'DOT_ALONE');
+  v('7*.', k('7*.'), 'DOT_ALONE');
+  // rule 5: stray right bracket
+  v(')', [')'], 'STRAY_CLOSE', function (r) { eq(r.pos, 0, 'G1 ) pos'); });
+  v('7)', k('7)'), 'STRAY_CLOSE');
+  v('(7))', k('(7))'), 'STRAY_CLOSE', function (r) { eq(r.pos, 3, 'G1 (7)) pos'); });
+  v('sqrt 2 R )', ['sqrt(', '2', 'R', ')'], 'STRAY_CLOSE');
+  v('sqrt ) inside', ['sqrt(', '2', ')'], 'STRAY_CLOSE');
+  // rule 6: unclosed brackets close implicitly
+  v('(7', k('(7'), null);
+  v('((7', k('((7'), null);
+  v('sin(2', ['sin(', '2'], null);
+  v('(7+(8', k('(7+(8'), null);
+  v('2*(3', k('2*(3'), null);
+  // rule 7: empty slots
+  v('frac empty', ['frac('], 'EMPTY_SLOT', function (r) { eq(r.path, 'root>frac@0.s0:0', 'G1 frac empty path'); });
+  v('frac no den', ['frac(', '1', ','], 'EMPTY_SLOT', function (r) { eq(r.path, 'root>frac@0.s1:0', 'G1 frac den path'); });
+  v('sqrt empty', ['sqrt('], 'EMPTY_SLOT');
+  v('cbrt empty', ['cbrt('], 'EMPTY_SLOT');
+  v('nroot no index', ['nroot(', '8'], 'EMPTY_SLOT', function (r) { eq(r.path, 'root>nroot@0.s1:0', 'G1 nroot index path'); });
+  v('nroot ok', ['nroot(', '8', ',', '3'], null);
+  v('logb no base', ['log_(', '8'], 'EMPTY_SLOT');
+  v('logb ok', ['log_(', '8', ',', '2'], null);
+  v('int no bounds', ['int(', 'x'], 'EMPTY_SLOT');
+  v('int ok', ['int(', 'x', ',', '0', ',', '1'], null);
+  v('deriv no point', ['deriv(', 'x'], 'EMPTY_SLOT');
+  v('deriv ok', ['deriv(', 'x', '^{2}', ',', '3'], null);
+  v('x^ empty', ['x', '^{}'], 'EMPTY_SLOT');
+  v('sci empty', ['2', '*10^{}'], 'EMPTY_SLOT');
+  v('sci ok', ['2', '*10^{}', '3'], null);
+  v('sci no base', ['*10^{}', '3'], null);
+  v('x^{2}', ['x', '^{2}'], null);
+  v('pow no base', ['^{}', '2'], 'POW_NO_BASE');
+  v('pow after op', ['2', '+', '^{2}'], 'POW_NO_BASE');
+  v('pow after open', ['(', '^{2}'], 'POW_NO_BASE');
+  v('nested empty', ['frac(', 'sqrt(', ',', '2'], 'EMPTY_SLOT', function (r) { eq(r.path, 'root>frac@0.s0>sqrt@0.s0:0', 'G1 nested empty path'); });
+  // rule 8/9
+  v('()', k('()'), 'EMPTY_PARENS');
+  v('(', ['('], 'EMPTY_PARENS');
+  v('2(', k('2('), 'EMPTY_PARENS');
+  v('(())', k('(())'), 'EMPTY_PARENS');
+  v('sin(', ['sin('], 'FN_NO_ARG');
+  v('sin()', ['sin(', ')'], 'FN_NO_ARG');
+  v('lg(', ['lg('], 'FN_NO_ARG');
+  v('log(', ['log('], 'FN_NO_ARG');
+  v('f(', ['f('], 'FN_NO_ARG');
+  v('cos(+)', ['cos(', '+', ')'], 'OP_TRAILING');
+  v('empty', [], 'EMPTY');
+  // rule 10: implicit multiplication stays valid
+  v('2x', k('2x'), null);
+  v('x2', k('x2'), null);
+  v('2(3+4)', k('2(3+4)'), null);
+  v('(3+4)2', k('(3+4)2'), null);
+  v('xy', k('xy'), null);
+  v('2pi', ['2', 'pi'], null);
+  v('2e', ['2', 'e'], null);
+  v('2Ans', ['2', 'Ans'], null);
+  v('Ans2', ['Ans', '2'], null);
+  v('2sqrt', ['2', 'sqrt(', '3'], null);
+  v('x^2y', ['x', '^{2}', 'y'], null);
+  v('2sin', ['2', 'sin(', 'x'], null);
+  v('sin x cos x', ['sin(', 'x', ')', 'cos(', 'x'], null);
+  v('frac frac', ['frac(', '1', ',', '2', 'R', 'frac(', '3', ',', '4'], null);
+  v('2frac', ['2', 'frac(', '1', ',', '3'], null);
+  v('(2)(3)', k('(2)(3)'), null);
+  v('1.5*10^3', ['1', '.', '5', '*10^{}', '3'], null);
+  v('const', ['2', 'const:c'], null);
+  // validate does not mutate state
+  play(['7', '+', '+', '8']); var before = EC.serialize('t') + '|' + EC.__dbg().cur;
+  EC.validate('t'); EC.validate();
+  eq(EC.serialize('t') + '|' + EC.__dbg().cur, before, 'G1 validate is read-only');
+  ok(EC.setCursorPath('t', EC.validate('t').path) === true, 'G1 error path resolves');
+  EC.setKey(null);
+  ok(typeof EC.validate === 'function' && typeof EC.validateBlock === 'function', 'G1 exports');
+  eq(Object.keys(EC.VALIDATE_MSG).length, 12, 'G1 code table size');
+  // fuzz smoke (fixed seed, small count) runs clean
+  var cp = require('child_process').spawnSync(process.execPath, [require('path').join(__dirname, 'syntax-fuzz.js'), '--count', '300'], { encoding: 'utf8' });
+  ok(cp.status === 0 && / fail=0$/m.test(cp.stdout), 'G1 syntax-fuzz 300 clean');
+})();
+console.log('G1 new assertions: ' + (pass + fail - g1Start));
+
 /* ---- module hygiene ---- */
 (function () {
   var src = require('fs').readFileSync(require('path').join(__dirname, 'editor-core.js'), 'utf8');

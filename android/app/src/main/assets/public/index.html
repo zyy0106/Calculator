@@ -65,7 +65,12 @@
             flex: 1 1 auto; min-height: 90px; /* U1: all spare height goes to the formula screen; 90px = measured formula line (36) + result line (31) + padding/border (22) */
         }
         .screen.screen-fixed { flex: 0 0 auto; min-height: 88px; } /* U1: plot / const panel keep the v2 height */
-        #single-line-display { flex: 1 1 auto; min-height: 0; align-content: center; }
+        /* D1: formula block + result line are centred together by .screen{justify-content:center}; the formula block is content-height
+           (flex-basis auto) and only shrinks (then scrolls, centred by centerDisplayY) when taller than the free space */
+        #single-line-display { flex: 0 1 auto; min-height: 0; }
+        #calc-res-val { margin: 5px 0 2px; } /* D1: 2px bottom mirrors the 2px top margin of .katex-display so the group is symmetric */
+        .screen.ec-tight #single-line-display > .katex-display, .screen.ec-tight #calc-res-val { margin: 0; } /* D1: group taller than the screen -> drop the 11px of spacing first */
+        .screen.screen-fixed #calc-res-val { margin-bottom: 0; } /* D1: const panel keeps its exact v3 height (88px) */
         #single-line-display > .katex-display { margin: 2px 0; }
         .plot-info-area { display: none; flex-direction: column; gap: 5px; overflow: hidden; }
         .latex-line {
@@ -505,7 +510,7 @@
         <div class="plot-info-area" id="double-line-display">
             <div class="latex-line" id="line-fx"></div><div class="latex-line" id="line-gx"></div>
         </div>
-        <div id="calc-res-val" style="text-align:right;font-weight:800;font-size:20px;margin-top:5px;font-family:var(--cm);">0</div>
+        <div id="calc-res-val" style="text-align:right;font-weight:800;font-size:20px;font-family:var(--cm);">0</div>
     </div>
 
     <div style="display:none;flex-direction:column;gap:8px;flex:1;" id="roots-panel">
@@ -1296,7 +1301,7 @@
     if (v === '(') { insertItem(e, { t: 'open', fn: '' }); return true; }
     if (has(FN_INPUT, v)) { insertItem(e, { t: 'open', fn: FN_INPUT[v] }); return true; }
     if (has(NODE_INPUT, v)) { insertNode(e, makeNode(NODE_INPUT[v]), 0); return true; }
-    if (v === '^{}') { insertNode(e, makeNode('pow'), 0); return true; }
+    if (v === '^{}' || v === '^') { insertNode(e, makeNode('pow'), 0); return true; }   // raw '^' = '^{}' (was silently rejected: 7^^8 -> 78)
     if (v === '*10^{}') { insertNode(e, makeNode('sci'), 0); return true; }
     if (v === '^{2}') {
       var sq = makeNode('pow');
@@ -1404,6 +1409,90 @@
     return true;
   }
 
+  /* ---------------- syntax validation (kernel level, independent of mathjs) ----------------
+     validate(key) -> { ok: true } | { ok: false, code, message, pos, path }
+     pos: index in the root block of the offending item (or of the top-level node containing it);
+     path: cursor path right after the offending item / inside the empty slot or brackets. */
+  var VALIDATE_MSG = {
+    EMPTY: 'Expression is empty',
+    OP_CONSECUTIVE: 'Two operators in a row',
+    OP_LEADING: 'Expression cannot start with this operator',
+    OP_TRAILING: 'Operator is missing its right operand',
+    DOT_DOUBLE: 'Consecutive decimal points',
+    DOT_MULTIPLE: 'More than one decimal point in a number',
+    DOT_ALONE: 'Decimal point without digits',
+    STRAY_CLOSE: 'Right bracket has no matching left bracket',
+    EMPTY_PARENS: 'Empty brackets',
+    FN_NO_ARG: 'Function is missing its argument',
+    EMPTY_SLOT: 'A required box is empty',
+    POW_NO_BASE: 'Power has no base'
+  };
+  // item: index of the offending item in its block; at: cursor index for path
+  function vErr(code, path, item, at, rootIdx) {
+    return { ok: false, code: code, message: VALIDATE_MSG[code], pos: rootIdx === null ? item : rootIdx, path: path + ':' + at };
+  }
+  // every slot of every node is required (an empty slot serializes to EMPTY_MARK)
+  function validateSlots(n, path, i, rootIdx) {
+    for (var si = 0; si < n.s.length; si++) {
+      var r = validateBlock(n.s[si], path + '>' + n.t + '@' + i + '.s' + si, rootIdx === null ? i : rootIdx);
+      if (r) return r;
+    }
+    return null;
+  }
+  // mirrors serBlock's frame/operand model; a block (root or slot) or bracket is an expression start,
+  // where a single unary + or - is allowed. Returns null when valid, else an error object.
+  function validateBlock(b, path, rootIdx) {
+    var stack = [{ fn: null, n: 0, last: null, lastIdx: -1, openIdx: -1 }];
+    function top() { return stack[stack.length - 1]; }
+    function operand() { var f = top(); f.n++; f.last = 'N'; }
+    function endFrame(f) {
+      if (f.n === 0) return vErr(f.fn === '' ? 'EMPTY_PARENS' : 'FN_NO_ARG', path, f.openIdx, f.openIdx + 1, rootIdx);
+      if (f.last === 'O') return vErr('OP_TRAILING', path, f.lastIdx, f.lastIdx + 1, rootIdx);
+      return null;
+    }
+    var r, f;
+    for (var i = 0; i < b.length; i++) {
+      var it = b[i];
+      if (it.t === 'd') {
+        var j = i, s = '';
+        while (j < b.length && b[j].t === 'd') { s += b[j].v; j++; }
+        if (s.indexOf('..') >= 0) return vErr('DOT_DOUBLE', path, i + s.indexOf('..') + 1, i + s.indexOf('..') + 2, rootIdx);
+        if (s.indexOf('.') !== s.lastIndexOf('.')) return vErr('DOT_MULTIPLE', path, i + s.lastIndexOf('.'), i + s.lastIndexOf('.') + 1, rootIdx);
+        if (!/[0-9]/.test(s)) return vErr('DOT_ALONE', path, i, j, rootIdx);
+        operand();
+        i = j - 1;
+      } else if (it.t === 'op') {
+        f = top();
+        if (f.last === 'O') return vErr('OP_CONSECUTIVE', path, i, i + 1, rootIdx);
+        if (f.n === 0 && it.v !== '+' && it.v !== '-') return vErr('OP_LEADING', path, i, i + 1, rootIdx);
+        f.n++; f.last = 'O'; f.lastIdx = i;
+      } else if (it.t === 'var' || it.t === 'ans' || it.t === 'const') operand();
+      else if (it.t === 'open') stack.push({ fn: it.fn, n: 0, last: null, lastIdx: -1, openIdx: i });
+      else if (it.t === 'close') {
+        if (stack.length < 2) return vErr('STRAY_CLOSE', path, i, i + 1, rootIdx);
+        r = endFrame(stack.pop());
+        if (r) return r;
+        operand();
+      } else if (it.t === 'xclose') return vErr('STRAY_CLOSE', path, i, i + 1, rootIdx);
+      else if (isNode(it)) {
+        if (it.t === 'pow' && top().last !== 'N') return vErr('POW_NO_BASE', path, i, i, rootIdx);
+        r = validateSlots(it, path, i, rootIdx);
+        if (r) return r;
+        operand();
+      }
+    }
+    while (stack.length > 1) {   // unclosed brackets are closed implicitly (never an error by themselves)
+      r = endFrame(stack.pop());
+      if (r) return r;
+      operand();
+    }
+    f = stack[0];
+    if (f.n === 0) return vErr(rootIdx === null ? 'EMPTY' : 'EMPTY_SLOT', path, 0, 0, rootIdx);
+    if (f.last === 'O') return vErr('OP_TRAILING', path, f.lastIdx, f.lastIdx + 1, rootIdx);
+    return null;
+  }
+  function validate(key) { return validateBlock(ed(key).root, 'root', null) || { ok: true }; }
+
   /* ---------------- public API ---------------- */
   function append(v) { var k = activeEditorKey(); var r = doAppend(editors[k], v); notify(k); return r; }
   function deleteLast() { var k = activeEditorKey(); var r = doDelete(editors[k]); notify(k); return r; }
@@ -1498,7 +1587,7 @@
   return {
     // public editor API
     append: append, deleteLast: deleteLast, moveCursor: moveCursor, clearAll: clearAll,
-    renderTex: renderTex, serialize: serialize, isEmpty: isEmpty, cursorToEnd: cursorToEnd,
+    renderTex: renderTex, serialize: serialize, validate: validate, isEmpty: isEmpty, cursorToEnd: cursorToEnd,
     keyToInput: keyToInput, configure: configure, setKey: setKey,
     setCursorPath: setCursorPath, cursorPositions: cursorPositions, cursorPath: cursorPath,
     editors: editors, activeEditorKey: activeEditorKey, ed: ed, __dbg: __dbg,
@@ -1509,7 +1598,8 @@
     blockEmpty: blockEmpty, allSlotsEmpty: allSlotsEmpty, takeBase: takeBase,
     serBlock: serBlock, serSlot: serSlot, serNode: serNode, joinParts: joinParts,
     serializeRoot: serializeRoot, texBlock: texBlock, texSlot: texSlot, texNode: texNode,
-    joinTex: joinTex, anchorTex: anchorTex, resolvePath: resolvePath
+    joinTex: joinTex, anchorTex: anchorTex, resolvePath: resolvePath,
+    validateBlock: validateBlock, VALIDATE_MSG: VALIDATE_MSG
   };
 });
 </script>
@@ -1947,8 +2037,8 @@ function getCombinedScope() {
         a: varVals.a, b: varVals.b, c: varVals.c, y: varVals.y, z: varVals.z, Ans: lastAnswerVal
     }));
     if (varExprs.x !== '') scope.set('x', varVals.x);
-    try { if (state.expr.fx) math.evaluate(`f(x) = ${getEvalString(state.expr.fx)}`, scope); } catch(e) {}
-    try { if (state.expr.gx) math.evaluate(`g(x) = ${getEvalString(state.expr.gx)}`, scope); } catch(e) {}
+    try { if (state.expr.fx && !syntaxGate('fx')) math.evaluate(`f(x) = ${getEvalString(state.expr.fx)}`, scope); } catch(e) {}
+    try { if (state.expr.gx && !syntaxGate('gx')) math.evaluate(`g(x) = ${getEvalString(state.expr.gx)}`, scope); } catch(e) {}
     return scope;
 }
 
@@ -1972,11 +2062,32 @@ function scrollCursorIntoView(container) {
     if (left - 24 < sl) sl = left - 24;
     container.scrollLeft = Math.min(max, Math.max(0, sl));
 }
+// D1: tall formula (block shrunk below its content) -> start vertically centred, but keep the cursor visible
+function centerDisplayY(el) {
+    var scr = el.parentNode;
+    scr.classList.remove('ec-tight');
+    if (el.scrollHeight - el.clientHeight > 1) scr.classList.add('ec-tight');
+    if (window.__ec_autoscroll_enabled === false) return;
+    var extra = el.scrollHeight - el.clientHeight;   // integer-rounded: 1px can be pure rounding, not real overflow
+    if (extra <= 1) { el.scrollTop = 0; return; }
+    // centre the visible .katex box (scrollHeight also counts KaTeX strut/vlist depth below the glyphs)
+    var cr = el.getBoundingClientRect(), ch = el.clientHeight, k = el.querySelector('.katex');
+    var top = extra / 2, c = el.querySelector('.cursor-blink');
+    if (k) { var kr = k.getBoundingClientRect(); top = (kr.top + kr.bottom) / 2 - cr.top + el.scrollTop - ch / 2; }
+    if (c) {   // only leave the centre when the cursor would be (partly) hidden
+        var r = c.getBoundingClientRect();
+        var cy = (r.top + r.bottom) / 2 - cr.top + el.scrollTop, pad = Math.min(ch / 2, r.height / 2);
+        if (cy + pad > top + ch) top = cy + pad - ch;
+        if (cy - pad < top) top = cy - pad;
+    }
+    el.scrollTop = Math.min(extra, Math.max(0, top));
+}
 function renderLatex() {    try {
         let tex = getDisplayTex(currentExpression, state.mode);
         // 注意这里将 throwOnError 改为 true，主动暴露渲染错误
         katex.render(tex, singleDisplay, { displayMode:true, throwOnError:true, trust:true });
         scrollCursorIntoView(singleDisplay);
+        centerDisplayY(singleDisplay);
     } catch (e) {
         // 捕获错误并输出平滑的中文提示
         singleDisplay.innerHTML = `<div style="color:var(--btn-danger); font-size:16px; font-weight:800; display:flex; justify-content:center; align-items:center; padding-top:15px; font-family: sans-serif;">表达式过于复杂，请简化</div>`;
@@ -2021,6 +2132,7 @@ function bindDisplayTap(el) {
     el.addEventListener('pointerleave', e => { if (e.pointerId === pid) end(); });
 }
 bindDisplayTap(singleDisplay);
+window.addEventListener('resize', function () { requestAnimationFrame(function () { centerDisplayY(singleDisplay); }); });   // D1: screen height follows the viewport
 
 function updatePlotScreen() {
     const renderNoPrefix = (id, label, key) => {
@@ -2050,6 +2162,38 @@ function clearAll() {
     if (state.mode === 'funcs') resVal.innerText = '编辑中...';
 }
 
+// W1: 语法校验门 (内核 EditorCore.validate, 不依赖 mathjs; mathjs 会把 7++8 算成 15)
+const SYNTAX_MSG_ZH = {
+    OP_CONSECUTIVE: '运算符不能连续出现',
+    OP_LEADING: '表达式不能以该运算符开头',
+    OP_TRAILING: '运算符后缺少运算数',
+    DOT_DOUBLE: '小数点不能连续出现',
+    DOT_MULTIPLE: '一个数中只能有一个小数点',
+    DOT_ALONE: '小数点前后缺少数字',
+    STRAY_CLOSE: '多余的右括号',
+    EMPTY_PARENS: '括号内为空',
+    FN_NO_ARG: '函数缺少参数',
+    EMPTY_SLOT: '有未填写的方框',
+    POW_NO_BASE: '乘方缺少底数',
+    EMPTY: '表达式为空'
+};
+// 通过或为空(EMPTY 沿用各入口原有的空表达式处理)返回 null; 否则返回中文提示.
+// jump: 用 setCursorPath 把该编辑器的光标跳到出错处 (path 无效则忽略, 不抛异常)
+function syntaxGate(key, jump) {
+    let r;
+    try { r = EditorCore.validate(key); } catch (e) { return null; }
+    if (!r || r.ok !== false || r.code === 'EMPTY') return null;
+    if (jump) {
+        const active = key === EditorCore.activeEditorKey(), keepExpr = currentExpression, keepPos = cursorPos;
+        try {
+            const moved = EditorCore.setCursorPath(key, r.path);
+            if (!active) { currentExpression = keepExpr; cursorPos = keepPos; }   // 后台编辑器: 只移光标, 不动当前显示
+            else if (moved) renderLatex();
+        } catch (e) { /* ignore */ }
+    }
+    return SYNTAX_MSG_ZH[r.code] || '语法错误';
+}
+
 function xUndefinedErr(e) { const msg = e.message || ''; return /undefined symbol\s+x\b/i.test(msg) || /\bx\b.*undefined/i.test(msg); }
 
 // 遵循 "语法错误 > 数学错误 > 变量未定义" 优先级的计算引擎
@@ -2058,11 +2202,13 @@ function calculate() {
     const key = EditorCore.activeEditorKey();
     const ser = EditorCore.serialize(key);
     if (state.mode === 'funcs') {
+        const synErr = syntaxGate(key, true); if (synErr) { resVal.innerText = synErr; return; }
         try { math.parse(ser); state.expr[key] = ser; resVal.innerText = '已保存'; }
         catch (e) { resVal.innerText = '语法错误'; }
         return;
     }
     if (ser.trim() === '') { resVal.innerText = '0'; return; }
+    { const synErr = syntaxGate(key, true); if (synErr) { resVal.innerText = synErr; return; } }
     try {
         math.parse(ser);
         const res = math.evaluate(ser, getCombinedScope());
@@ -2688,6 +2834,7 @@ function calculateRoots() {
     const exp = state.expr[state.rootTarget === 'f' ? 'fx' : 'gx'];
     const listEl = document.getElementById('root-list'); listEl.innerHTML = '';
     if (!exp) { listEl.innerText = '函数未定义'; return; }
+    { const synErr = syntaxGate(state.rootTarget === 'f' ? 'fx' : 'gx', true); if (synErr) { listEl.innerText = synErr; return; } }
     if (x1 >= x2) { listEl.innerText = 'Start 必须小于 End'; return; }
     try {
         const scope = getCombinedScope(), compiled = math.compile(getEvalString(exp));
@@ -2729,7 +2876,7 @@ function drawGraph() {
     ctx.strokeStyle='#ccc';ctx.lineWidth=1.5;ctx.beginPath(); ctx.moveTo(0,mY(0));ctx.lineTo(w,mY(0)); ctx.moveTo(mX(0),0);ctx.lineTo(mX(0),h); ctx.stroke();
     const scope = getCombinedScope();
     [['fx','#0984e3'],['gx','#e17055']].forEach(([key,color])=>{
-        if(!state.expr[key])return;
+        if(!state.expr[key]||syntaxGate(key))return;
         try{ const compiled=math.compile(getEvalString(state.expr[key])); ctx.beginPath();ctx.strokeStyle=color;ctx.lineWidth=2.5; let first=true; for(let i=0;i<=w;i+=1.5){ const x = config.xMin+(i/w)*(config.xMax-config.xMin), y = evalWithLocalX(compiled, scope, x); if(typeof y==='number'&&isFinite(y)){ const py=mY(y); if(first){ctx.moveTo(i,py);first=false;}else{ctx.lineTo(i,py);} }else{first=true;} } ctx.stroke(); }catch(e){}
     });
 }
@@ -2738,7 +2885,7 @@ function drawTracker(px,py) {
     ctx.strokeStyle='rgba(80,80,80,0.3)';ctx.lineWidth=1; ctx.setLineDash([5,5]); ctx.beginPath();ctx.moveTo(px,0);ctx.lineTo(px,h);ctx.stroke(); ctx.setLineDash([]);
     const scope = getCombinedScope(), hits=[];
     [['fx','#0984e3','f'],['gx','#e17055','g']].forEach(([key,color,label])=>{
-        if(!state.expr[key])return;
+        if(!state.expr[key]||syntaxGate(key))return;
         try{ const compiled = math.compile(getEvalString(state.expr[key])); const y = evalWithLocalX(compiled, scope, x); if(typeof y!=='number'||!isFinite(y))return; const dotY=mY(y); ctx.beginPath();ctx.arc(px,dotY,6,0,Math.PI*2); ctx.fillStyle='white';ctx.fill(); ctx.beginPath();ctx.arc(px,dotY,4.5,0,Math.PI*2); ctx.fillStyle=color;ctx.fill(); hits.push({label,y,color}); }catch(e){}
     });
     if(!hits.length){ctx.restore();return;}

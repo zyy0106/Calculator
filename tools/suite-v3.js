@@ -214,6 +214,101 @@ const geomOk = (r, n) => r.b.items.length === n && r.b.items.every(i => Math.abs
       }
       await q.close();
     }
+    // ---- W: W1 syntax gate (EditorCore.validate -> Chinese message), real button clicks ----
+    const ZH = { OP_CONSECUTIVE: '运算符不能连续出现', OP_LEADING: '表达式不能以该运算符开头', OP_TRAILING: '运算符后缺少运算数',
+      DOT_DOUBLE: '小数点不能连续出现', DOT_MULTIPLE: '一个数中只能有一个小数点', DOT_ALONE: '小数点前后缺少数字', STRAY_CLOSE: '多余的右括号',
+      EMPTY_PARENS: '括号内为空', FN_NO_ARG: '函数缺少参数', EMPTY_SLOT: '有未填写的方框', POW_NO_BASE: '乘方缺少底数' };
+    const v = await newPage(browser, 420, 860, errs);
+    v.on('console', m => { if (m.type() === 'error') errs.push('console: ' + m.text()); });
+    // first visible element matching sel, clicked with the real mouse
+    const clickSel = async (q, sel) => { const c = await q.evaluate(sel => { const e = [...document.querySelectorAll(sel)].find(b => b.offsetParent !== null);
+      if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }, sel);
+      if (!c) throw new Error('no visible ' + sel); await q.mouse.click(c.x, c.y); await q.waitForTimeout(15); };
+    const KB = '#keyboard-area ';
+    // tokens: R/L cursor, = calculate, AC, POW = long-press x² -> xʸ, SQRT/SIN = short tap √/sin, others: the button with append(token)
+    async function keys(q, seq) {
+      for (const k of seq) {
+        if (k === 'R') await clickSel(q, KB + 'button[onclick="moveCursor(1)"]');
+        else if (k === 'L') await clickSel(q, KB + 'button[onclick="moveCursor(-1)"]');
+        else if (k === '=') await clickSel(q, KB + 'button[onclick="calculate()"]');
+        else if (k === 'AC') await clickSel(q, KB + 'button[onclick="clearAll()"]');
+        else if (k === 'POW') await longPress(q, 'key-sq', 1);
+        else if (k === 'SQRT') await tap(q, 'key-sqrt');
+        else if (k === 'SIN') await tap(q, 'key-sin');
+        else await clickSel(q, 'button[onclick="append(\'' + k + '\')"]');
+      }
+    }
+    const resText = q => q.evaluate(() => document.getElementById('calc-res-val').innerText);
+    const curPath = (q, k) => q.evaluate(k => EditorCore.cursorPath(EditorCore.ed(k)), k);
+    await clickSel(v, '#nav-main');
+    const BAD = [
+      ['7++8', ['7', '+', '+', '8'], 'OP_CONSECUTIVE', 'root:3'], ['7--8', ['7', '-', '-', '8'], 'OP_CONSECUTIVE', 'root:3'],
+      ['7+-8', ['7', '+', '-', '8'], 'OP_CONSECUTIVE', 'root:3'], ['7*-8', ['7', '*', '-', '8'], 'OP_CONSECUTIVE', 'root:3'],
+      ['--7', ['-', '-', '7'], 'OP_CONSECUTIVE', 'root:2'], ['7^^8 (xʸ xʸ)', ['7', 'POW', 'POW', '8'], 'POW_NO_BASE', 'root>pow@1.s0:0'],
+      ['7*/8', ['7', '*', '/', '8'], 'OP_CONSECUTIVE', 'root:3'], ['7+*8', ['7', '+', '*', '8'], 'OP_CONSECUTIVE', 'root:3'],
+      ['*8', ['*', '8'], 'OP_LEADING', 'root:1'], ['/8', ['/', '8'], 'OP_LEADING', 'root:1'],
+      ['7+', ['7', '+'], 'OP_TRAILING', 'root:2'], ['7+8*', ['7', '+', '8', '*'], 'OP_TRAILING', 'root:4'],
+      ['7..8', ['7', '.', '.', '8'], 'DOT_DOUBLE', 'root:3'], ['7.5.2', ['7', '.', '5', '.', '2'], 'DOT_MULTIPLE', 'root:4'],
+      ['7+.', ['7', '+', '.'], 'DOT_ALONE', 'root:3'], ['.', ['.'], 'DOT_ALONE', 'root:1'],
+      ['7+()8', ['7', '+', '(', ')', '8'], 'EMPTY_PARENS', 'root:3'], ['7)', ['7', ')'], 'STRAY_CLOSE', 'root:2'],
+      ['sin()', ['SIN', ')'], 'FN_NO_ARG', null], ['empty sqrt', ['SQRT'], 'EMPTY_SLOT', 'root>sqrt@0.s0:0'],
+      ['empty frac', ['frac('], 'EMPTY_SLOT', 'root>frac@0.s0:0'], ['x^ empty exponent', ['x', 'POW'], 'EMPTY_SLOT', 'root>pow@1.s0:0']];
+    for (const [name, seq, code, path] of BAD) await T('W', 'syntax ' + name + ' -> ' + code, async () => {
+      await keys(v, ['AC', ...seq, '=']); const res = await resText(v); const cp = await curPath(v, 'main');
+      const ser = await v.evaluate(() => EditorCore.serialize('main'));
+      return chk(res === ZH[code] && !/[0-9]/.test(res) && (path === null || cp === path), { res, cp, ser }); });
+    await T('W', 'empty expression: = is silent (shows 0, no error)', async () => {
+      await keys(v, ['AC', '=']); const res = await resText(v); return chk(res === '0', res); });
+    // variable-definition entry: define x = 3 in the vars tab
+    await T('W', 'vars: x = 3 accepted', async () => {
+      await clickSel(v, '#nav-vars'); await clickSel(v, '#var-row-x'); await keys(v, ['AC', '3', '=']);
+      const r = await v.evaluate(() => ({ res: document.getElementById('calc-res-val').innerText, x: varVals.x })); return chk(r.x === 3 && num(r.res) === 3, r); });
+    await T('W', 'vars: a = 7++8 rejected in Chinese, a unchanged', async () => {
+      await clickSel(v, '#var-row-a'); const a0 = await v.evaluate(() => varVals.a); await keys(v, ['AC', '7', '+', '+', '8', '=']);
+      const r = await v.evaluate(() => ({ res: document.getElementById('calc-res-val').innerText, a: varVals.a }));
+      await keys(v, ['AC']); return chk(r.res === ZH.OP_CONSECUTIVE && r.a === a0, r); });
+    await clickSel(v, '#nav-main');
+    const GOOD = [['-7', ['-', '7'], -7], ['(-7)', ['(', '-', '7', ')'], -7], ['(+8)', ['(', '+', '8', ')'], 8],
+      ['2^{-3} (xʸ)', ['2', 'POW', '-', '3'], 0.125], ['frac(-1,2)', ['frac(', '-', '1', 'R', '2'], -0.5],
+      ['2x (x=3)', ['2', 'x'], 6], ['2(3+4)', ['2', '(', '3', '+', '4', ')'], 14], ['7+8', ['7', '+', '8'], 15]];
+    for (const [name, seq, want] of GOOD) await T('W', 'valid ' + name + ' = ' + want, async () => {
+      await keys(v, ['AC', ...seq, '=']); const res = await resText(v); return chk(/^=/.test(res) && near(num(res), want), res); });
+    // f(x) editor, root finder, graph
+    await T('W', 'funcs: f(x)=7++8 rejected in Chinese, cursor at error', async () => {
+      await clickSel(v, '#nav-funcs'); await keys(v, ['AC', '7', '+', '+', '8', '=']); const res = await resText(v); const cp = await curPath(v, 'fx');
+      return chk(res === ZH.OP_CONSECUTIVE && cp === 'root:3', { res, cp }); });
+    await T('W', 'roots: invalid f(x) shows Chinese in root list', async () => {
+      await clickSel(v, '#nav-roots'); await v.evaluate(() => calculateRoots());
+      const t = await v.evaluate(() => document.getElementById('root-list').innerText); return chk(t === ZH.OP_CONSECUTIVE, t); });
+    await T('W', 'plot: invalid f(x) skipped, no exception', async () => {
+      await clickSel(v, '#nav-plot'); await v.waitForTimeout(120); return chk(await v.evaluate(() => { drawGraph(); return true; }), 'drawGraph'); });
+    await T('W', 'funcs: f(x)=x+1 saved, f(2)=3 in main', async () => {
+      await clickSel(v, '#nav-funcs'); await keys(v, ['AC', 'x', '+', '1', '=']); const saved = await resText(v);
+      await clickSel(v, '#nav-main'); await keys(v, ['AC', 'f(', '2', '=']); const res = await resText(v);
+      return chk(saved === '已保存' && near(num(res), 3), { saved, res }); });
+    await T('W', 'roots: valid f(x)=x+1 finds -1', async () => {
+      await clickSel(v, '#nav-roots'); await v.evaluate(() => { document.getElementById('rootX1').value = '-5'; document.getElementById('rootX2').value = '5'; calculateRoots(); });
+      const t = await v.evaluate(() => document.getElementById('root-list').innerText); return chk(/[-\u2212]1(\D|$)/.test(t) && t.indexOf(ZH.OP_CONSECUTIVE) < 0, t); });
+    await v.close();
+
+    // ---- Y: D1 formula + result line vertically centred as a group (|top - bottom| <= 2px) ----
+    NUM.center = {};
+    for (const [w, h] of [[420, 860], [360, 640]]) {
+      const q = await newPage(browser, w, h, errs); await clickSel(q, '#nav-main');
+      const CC = { single: ['7', '+', '8'], frac: ['frac(', '1', 'R', '2'], nested: ['frac(', 'frac(', '1', 'R', '2', 'R', 'R', 'frac(', '3', 'R', '4'],
+        integral: ['int(', 'x', 'R', '0', 'R', '1'] };
+      for (const [n, seq] of Object.entries(CC)) await T('Y', w + 'x' + h + ' ' + n + ' group centred', async () => {
+        await keys(q, ['AC', ...seq, '=']);
+        const m = await q.evaluate(async () => { await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+          const sc = document.getElementById('main-screen'), k = document.querySelector('#single-line-display .katex'), rv = document.getElementById('calc-res-val');
+          const R = e => e.getBoundingClientRect(), cs = getComputedStyle(sc), s = R(sc);
+          const top = R(k).top - s.top - parseFloat(cs.paddingTop) - parseFloat(cs.borderTopWidth);
+          const bot = s.bottom - parseFloat(cs.paddingBottom) - parseFloat(cs.borderBottomWidth) - R(rv).bottom;
+          return { top: +top.toFixed(2), bot: +bot.toFixed(2), res: rv.innerText }; });
+        NUM.center[w + 'x' + h + ' ' + n] = m;
+        return chk(Math.abs(m.top - m.bot) <= 2 && m.top >= -0.5 && m.bot >= -0.5 && /^=/.test(m.res), m); });
+      await q.close();
+    }
     await T('E', 'no page errors', () => chk(errs.length === 0, errs.slice(0, 3)));
   } catch (e) { R.push({ sec: 'X', name: 'suite crashed', pass: false, info: String(e && e.message || e) }); }
   finally { await browser.close().catch(() => {}); }
