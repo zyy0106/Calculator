@@ -26,14 +26,14 @@
   var GHOST_CLOSE_TEX = '\\right.\\htmlClass{ghost-paren}{)}';
   var BASE_MISSING_TEX = '\\htmlClass{base-missing}{\\square}';
   var XCLOSE_TEX = ')';   // stray right bracket (no matching open): rendered bare
-  function anchorTex(path) { return '\\htmlId{ec-' + path + '}{\\htmlClass{ec-anchor}{\\phantom{|}}}'; }
+  function anchorTex(path) { return '\\htmlId{ec-' + path + '}{\\htmlClass{ec-anchor}{\\vphantom{|}}}'; }
 
-  var NODE_SLOTS = { frac: 2, sqrt: 1, int: 3, deriv: 2, pow: 1, sci: 1, logb: 2 };   // logb: s0 argument, s1 base
+  var NODE_SLOTS = { frac: 2, sqrt: 1, int: 3, deriv: 2, pow: 1, sci: 1, logb: 2, cbrt: 1, nroot: 2 };   // logb: s0 argument, s1 base; nroot: s0 radicand, s1 index
   // node types whose rendering needs \left( \right) when used as a power base
   var PW_TYPES = { frac: true, pow: true, sci: true, int: true, deriv: true, logb: true };
-  var FN_INPUT = { 'sin(': 'sin', 'cos(': 'cos', 'tan(': 'tan', 'asin(': 'asin', 'acos(': 'acos', 'atan(': 'atan', 'log10(': 'log10', 'log(': 'log', 'f(': 'f', 'g(': 'g' };
+  var FN_INPUT = { 'sin(': 'sin', 'cos(': 'cos', 'tan(': 'tan', 'asin(': 'asin', 'acos(': 'acos', 'atan(': 'atan', 'log10(': 'log10', 'lg(': 'log10', 'log(': 'log', 'f(': 'f', 'g(': 'g' };
   var FN_TEX = { '': '', sin: '\\sin', cos: '\\cos', tan: '\\tan', asin: '\\sin^{-1}', acos: '\\cos^{-1}', atan: '\\tan^{-1}', log10: '\\lg', log: '\\ln', f: 'f', g: 'g' };
-  var NODE_INPUT = { 'sqrt(': 'sqrt', 'frac(': 'frac', 'int(': 'int', 'deriv(': 'deriv', 'log_(': 'logb' };
+  var NODE_INPUT = { 'sqrt(': 'sqrt', 'frac(': 'frac', 'int(': 'int', 'deriv(': 'deriv', 'log_(': 'logb', 'cbrt(': 'cbrt', 'nroot(': 'nroot' };
   var OP_TEX = { '+': '+', '-': '-', '*': '\\times ', '/': '\\div ' };
   var VARS = { a: 1, b: 1, c: 1, x: 1, y: 1, z: 1, t: 1 };
 
@@ -237,6 +237,8 @@
   function serNode(n) {
     if (n.t === 'frac') return '((' + serSlot(n.s[0]) + ')/(' + serSlot(n.s[1]) + '))';
     if (n.t === 'sqrt') return 'sqrt((' + serSlot(n.s[0]) + '))';
+    if (n.t === 'cbrt') return 'cbrt((' + serSlot(n.s[0]) + '))';
+    if (n.t === 'nroot') return 'nthRoot((' + serSlot(n.s[0]) + '),(' + serSlot(n.s[1]) + '))';
     if (n.t === 'int') return 'int((' + serSlot(n.s[0]) + '),(' + serSlot(n.s[1]) + '),(' + serSlot(n.s[2]) + '))';
     if (n.t === 'logb') return 'log((' + serSlot(n.s[0]) + '),(' + serSlot(n.s[1]) + '))';
     if (n.t === 'deriv') return 'deriv((' + serSlot(n.s[0]) + '),(' + serSlot(n.s[1]) + '))';
@@ -295,6 +297,8 @@
     function sl(k) { return texSlot(n.s[k], cur, childCtx(ctx, n, ni, k)); }
     if (n.t === 'frac') return '\\frac{' + sl(0) + '}{' + sl(1) + '}';
     if (n.t === 'sqrt') return '\\sqrt{' + sl(0) + '}';
+    if (n.t === 'cbrt') return '\\sqrt[3]{' + sl(0) + '}';
+    if (n.t === 'nroot') return '\\sqrt[' + sl(1) + ']{' + sl(0) + '}';
     if (n.t === 'int') {
       return '\\int_{' + sl(1) + '}^{' + sl(2) + '} ' +
         sl(0) + '\\,\\mathrm{d}x';

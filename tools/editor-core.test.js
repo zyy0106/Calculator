@@ -328,7 +328,7 @@ seq('comma unchanged in sqrt', ['sqrt(', '2', ','], 'sqrt((2))', { cur: 'root>sq
   ok(EC.setCursorPath('no-such-key', 'root:0') === false && !Object.prototype.hasOwnProperty.call(EC.editors, 'no-such-key'), 'unknown key rejected');
   EC.clearAll();
   eq(EC.renderTex('t', { cursor: true, anchors: true }), EC.anchorTex('root:0') + EC.CUR_TEX, 'empty editor anchors');
-  eq(EC.anchorTex('root>sqrt@0.s0:1'), '\\htmlId{ec-root>sqrt@0.s0:1}{\\htmlClass{ec-anchor}{\\phantom{|}}}', 'anchor tex format');
+  eq(EC.anchorTex('root>sqrt@0.s0:1'), '\\htmlId{ec-root>sqrt@0.s0:1}{\\htmlClass{ec-anchor}{\\vphantom{|}}}', 'anchor tex format');
   EC.setKey(null);
 })();
 
@@ -420,6 +420,96 @@ seq('t then tan', ['t', 'tan(', 't', ')'], '(t*tan(t))');
   ['var_x', 'var_t'].forEach(function (k) { EC.setKey(k); EC.clearAll(); });
   EC.setKey(null);
 })();
+
+/* ---- K5: cbrt / nroot / lg nodes, zero-width anchors ---- */
+var k5Start = pass + fail;
+seq('cbrt', ['cbrt(', '8', 'R', '+', '1'], 'cbrt((8))+1', { cur: 'root:3', tex: '\\sqrt[3]{8}+1' });
+seq('cbrt empty', ['cbrt('], 'cbrt((\u0000))', { cur: 'root>cbrt@0.s0:0', tex: '\\sqrt[3]{\\square}' });
+seq('cbrt del empty', ['cbrt(', 'DEL'], '', { cur: 'root:0' });
+seq('unwrap cbrt', ['cbrt(', '2', 'L', 'DEL'], '2', { cur: 'root:0' });
+seq('cbrt of sin', ['cbrt(', 'sin(', 'x'], 'cbrt((sin(x)))', { cur: 'root>cbrt@0.s0:2', texHas: ['ghost-paren'] });
+seq('frac of cbrt', ['frac(', 'cbrt(', '2', 'R', ',', '3'], '((cbrt((2)))/(3))', { cur: 'root>frac@0.s1:1', tex: '\\frac{\\sqrt[3]{2}}{3}' });
+seq('nroot', ['nroot(', '8', ',', '3'], 'nthRoot((8),(3))', { cur: 'root>nroot@0.s1:1', tex: '\\sqrt[3]{8}' });
+seq('nroot empty', ['nroot('], 'nthRoot((\u0000),(\u0000))', { cur: 'root>nroot@0.s0:0', tex: '\\sqrt[\\square]{\\square}' });
+seq('nroot empty index', ['nroot(', '8'], 'nthRoot((8),(\u0000))', { cur: 'root>nroot@0.s0:1', tex: '\\sqrt[\\square]{8}' });
+seq('nroot empty radicand', ['nroot(', ',', '4'], 'nthRoot((\u0000),(4))', { cur: 'root>nroot@0.s1:1', tex: '\\sqrt[4]{\\square}' });
+seq('nroot del empty', ['nroot(', 'DEL'], '', { cur: 'root:0' });
+seq('nroot then plus', ['nroot(', '8', ',', '3', 'R', '+', '1'], 'nthRoot((8),(3))+1', { cur: 'root:3', tex: '\\sqrt[3]{8}+1' });
+seq('lg', ['lg(', '1', '0', '0', ')'], 'log10(100)', { tex: '\\lg\\left(100\\right)' });
+seq('lg empty', ['lg('], 'log10(\u0000)', { texHas: ['\\lg'] });
+seq('lg in nroot', ['nroot(', 'lg(', 'x', ')', ',', '2'], 'nthRoot((log10(x)),(2))', { cur: 'root>nroot@0.s1:1' });
+seq('log10 still kept', ['log10(', '1', '0', ')'], 'log10(10)', { tex: '\\lg\\left(10\\right)' });
+(function () {
+  // same token sequence, node A vs node B: cursor paths, accepted flags, serialization shape must match
+  function trace(tokens) {
+    EC.setKey('t'); EC.clearAll();
+    var r = tokens.map(function (t) { var a = step(t); return (a ? '1' : '0') + EC.__dbg().cur + '|' + EC.serialize(); });
+    r.push(String(EC.cursorPositions('t').length));
+    EC.setKey(null);
+    return r.join(' ');
+  }
+  var twoSlot = [
+    ['N', '8'], ['N', '8', ','], ['N', '8', ',', '3'], ['N', '8', ',', '3', ','], ['N', '8', ',', '3', ',', '1'],
+    ['N', '8', ',', '3', 'L', 'L', 'L'], ['N', '8', ',', '3', 'LL', 'LL', 'LL', 'LL'], ['N', '8', ',', '3', 'R', 'R'],
+    ['N', '8', ',', '3', 'DEL', 'DEL', 'DEL', 'DEL'], ['N', ',', 'DEL', 'DEL'], ['N', '8', ',', 'DEL', 'DEL', 'DEL'],
+    ['1', 'N', '2', ',', '3', 'R', 'LL', 'LL', 'LL', 'DEL'], ['N', 'N', '2', ',', '3', ',', '4']
+  ];
+  twoSlot.forEach(function (tk, i) {
+    var lb = trace(tk.map(function (t) { return t === 'N' ? 'log_(' : t; }));
+    var nr = trace(tk.map(function (t) { return t === 'N' ? 'nroot(' : t; }));
+    eq(nr, lb.replace(/logb/g, 'nroot').replace(/log\(/g, 'nthRoot('), 'nroot mirrors logb #' + i);
+  });
+  var oneSlot = [
+    ['N', '2'], ['N', '2', 'R'], ['N', '2', 'L'], ['N', '2', 'LL', 'LL'], ['N', '2', 'R', 'LL', 'DEL'],
+    ['N', '2', 'DEL', 'DEL'], ['N', '2', ')'], ['N', '8', ')', 'DEL'], ['3', 'N', '2', 'R', 'x']
+  ];
+  oneSlot.forEach(function (tk, i) {
+    var sq = trace(tk.map(function (t) { return t === 'N' ? 'sqrt(' : t; }));
+    var cb = trace(tk.map(function (t) { return t === 'N' ? 'cbrt(' : t; }));
+    eq(cb, sq.replace(/sqrt/g, 'cbrt'), 'cbrt mirrors sqrt #' + i);
+  });
+  // cursorPositions / setCursorPath round trip / anchors
+  function play(tokens) { EC.setKey('t'); EC.clearAll(); tokens.forEach(step); }
+  play(['nroot(', '8', ',', '3']);
+  var pos = EC.cursorPositions('t');
+  eq(pos.join(' '), 'root:0 root>nroot@0.s0:0 root>nroot@0.s0:1 root>nroot@0.s1:0 root>nroot@0.s1:1 root:1', 'nroot positions');
+  pos.forEach(function (p) { ok(EC.setCursorPath('t', p) === true && EC.cursorPath(EC.ed('t')) === p, 'nroot setCursorPath ' + p); });
+  var at = EC.renderTex('t', { cursor: true, anchors: true });
+  eq(count(at, 'ec-anchor'), pos.length, 'nroot anchor count');
+  ok(at.indexOf('\\phantom{') < 0 && count(at, '\\vphantom{|}') === pos.length, 'nroot anchors zero-width');
+  play(['cbrt(', '2', '7']);
+  pos = EC.cursorPositions('t');
+  eq(pos.join(' '), 'root:0 root>cbrt@0.s0:0 root>cbrt@0.s0:1 root>cbrt@0.s0:2 root:1', 'cbrt positions');
+  pos.forEach(function (p) { ok(EC.setCursorPath('t', p) === true && EC.cursorPath(EC.ed('t')) === p, 'cbrt setCursorPath ' + p); });
+  eq(count(EC.renderTex('t', { cursor: true, anchors: true }), 'ec-anchor'), pos.length, 'cbrt anchor count');
+  play(['nroot(']);
+  pos = EC.cursorPositions('t');
+  eq(pos.length, 4, 'empty nroot positions');
+  at = EC.renderTex('t', { cursor: false, anchors: true });
+  ok(at.indexOf(EC.anchorTex('root>nroot@0.s1:0') + EC.SQ_TEX) >= 0 && at.indexOf(EC.anchorTex('root>nroot@0.s0:0') + EC.SQ_TEX) >= 0, 'empty nroot slots anchored squares');
+  ok(EC.setCursorPath('t', 'root>nroot@0.s2:0') === false, 'nroot has no s2');
+  ok(EC.setCursorPath('t', 'root>cbrt@0.s0:0') === false, 'wrong node type rejected');
+  ok(EC.setCursorPath('t', 'root>nroot@0.s1:0') === true, 'jump into empty index');
+  ok(EC.renderTex('t').indexOf('\\sqrt[' + EC.SQ_CUR_TEX + ']{\\square}') >= 0, 'cursor square in empty index');
+  EC.setKey(null);
+  eq(EC.anchorTex('root:0'), '\\htmlId{ec-root:0}{\\htmlClass{ec-anchor}{\\vphantom{|}}}', 'anchorTex is vphantom');
+  ok(EC.anchorTex('root:0').indexOf('\\phantom') < 0, 'anchorTex no \\phantom');
+  // static tables / direct node rendering
+  eq(EC.NODE_SLOTS.cbrt, 1, 'NODE_SLOTS.cbrt'); eq(EC.NODE_SLOTS.nroot, 2, 'NODE_SLOTS.nroot');
+  play(['nroot(', '8']); var n = EC.ed('t').root[0]; EC.setKey(null);
+  eq(EC.texNode(n, null, null, 0), '\\sqrt[\\square]{8}', 'texNode nroot empty index');
+  eq(EC.serNode(n), 'nthRoot((8),(\u0000))', 'serNode nroot empty index');
+  eq(EC.texNode(EC.makeNode('cbrt'), null, null, 0), '\\sqrt[3]{\\square}', 'texNode cbrt empty');
+  eq(EC.serNode(EC.makeNode('cbrt')), 'cbrt((\u0000))', 'serNode cbrt empty');
+  // mathjs evaluates the serialized code
+  var M = require('../www/math.min.js');
+  function evalSeq(tokens) { play(tokens); var v = M.evaluate(EC.serialize()); EC.setKey(null); return Number(v); }
+  ok(Math.abs(evalSeq(['cbrt(', '2', '7']) - 3) < 1e-12, 'eval cbrt(27)');
+  ok(Math.abs(evalSeq(['nroot(', '3', '2', ',', '5']) - 2) < 1e-12, 'eval nthRoot(32,5)');
+  ok(Math.abs(evalSeq(['lg(', '1', '0', '0', '0', ')']) - 3) < 1e-12, 'eval lg(1000)');
+  ok(Math.abs(evalSeq(['2', 'nroot(', '1', '6', ',', '4', 'R', '+', 'cbrt(', '8']) - 6) < 1e-12, 'eval 2*nroot+cbrt');
+})();
+console.log('K5 new assertions: ' + (pass + fail - k5Start));
 
 /* ---- module hygiene ---- */
 (function () {
